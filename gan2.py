@@ -1,4 +1,4 @@
-drive_dir = "." 
+drive_dir = "." #"drive/MyDrive/CFRM/RL/SingleAgent-Stage2"
 
 import json
 import math
@@ -25,46 +25,70 @@ else:
     DEVICE = "cuda"
 
 ## Regimes
-N_AGENT = 2
-COST_POWER = 1.5
+N_AGENT = 10
+COST_POWER = 2
 
 ## Global Constants
-S_VAL = 1
+S_VAL = 1 #245714618646 #1#
 
 if COST_POWER == 2:
     TR = 0.2
     if N_AGENT == 10:
         XI_LIST = torch.tensor([-2.89, -1.49, -1.18, 1.4, 1.91, 2.7, -2.22, -3.15, 2.63, 2.29]).float() * (-10)
         GAMMA_LIST = torch.tensor([1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9]).float().to(device = DEVICE)
+    elif N_AGENT == 5:
+        XI_LIST = torch.tensor([-3, -2, -2, 3, 4]).float() * (-1)
+        GAMMA_LIST = torch.tensor([1, 1.2, 1.4, 1.6, 1.8]).float().to(device = DEVICE)
 else:
     if N_AGENT == 2:
         TR = 0.4
         XI_LIST = torch.tensor([3, -3]).float()
         GAMMA_LIST = torch.tensor([1, 2]).float().to(device = DEVICE)
+    elif N_AGENT == 5:
+        TR = 0.2
+        XI_LIST = torch.tensor([-3, -2, -2, 3, 4]).float() * (-1)
+        GAMMA_LIST = torch.tensor([1, 1.2, 1.4, 1.6, 1.8]).float().to(device = DEVICE)
     else:
         TR = 0.2
         XI_LIST = torch.tensor([-2.89, -1.49, -1.18, 1.4, 1.91, 2.7, -2.22, -3.15, 2.63, 2.29]).float() * (-10)
         GAMMA_LIST = torch.tensor([1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9]).float().to(device = DEVICE)
+# TR = 0.2 #0.2 #0.2 for quad cost 2 agents and 0.4 for 1.5 cost 2 agents #20
 T = 100
 TIMESTAMPS = np.linspace(0, TR, T + 1)[:-1]
 DT = TR / T
-N_SAMPLE = 3000
-ALPHA = 1
-BETA = 2
+N_SAMPLE = 3000 #500 #128 #128
+ALPHA = 1 #1 #
+BETA = 2 #0.3 #0.5
+# GAMMA_BAR = 8.30864e-14 * S_VAL
+# KAPPA = 2.
 
+# GAMMA_1 = GAMMA_BAR*(KAPPA+1)/KAPPA
+# GAMMA_2 = GAMMA_BAR*(KAPPA+1)
 GAMMA_1 = 1
 GAMMA_2 = 2
+
+# XI_LIST = torch.tensor([3, -3]).float()
+# GAMMA_LIST = torch.tensor([GAMMA_1, GAMMA_2]).float().to(device = DEVICE)
+
+# XI_LIST = torch.tensor([-2.89, -1.49, -1.18, 1.4, 1.91, 2.7, -2.22, -3.15, 2.63, 2.29]).float() * (-10) #torch.tensor([3, -3]).float() #torch.tensor([-3, -2, -2, 3, 4]).float() * (-1) #torch.tensor([3.01, 2.92, -2.86, 3.14, 2.90, -3.12, -2.88, 2.90, -2.93, -3.08]).float() #torch.tensor([3, -2, 2, -3]).float() #
+# GAMMA_LIST = torch.tensor([1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9]).float().to(device = DEVICE) #torch.tensor([GAMMA_1, GAMMA_2]).float().to(device = DEVICE) #torch.tensor([1, 1.2, 1.4, 1.6, 1.8]).float().to(device = DEVICE) # #torch.tensor([1, 1, 1.3, 1.3, 1.6, 1.6, 1.9, 1.9, 2.2, 2.2]).float().to(device = DEVICE) #torch.tensor([1, 1, 2, 2]).float().to(device = DEVICE) #
 
 XI_NORM_LIST = (torch.max(torch.abs(XI_LIST)) / torch.abs(XI_LIST)) ** 2
 
 S = 1
-LAM = 1e-2
+## 1e-2: power 2 10 agents, power 1.5 2 agents
+## 1e-3: power 2 2 agents
+LAM = 1e-2 #1e-2 for 10 agents #1.08102e-10 * S_VAL #0.1 #
+
+S_TERMINAL = 1 #1/3 #245.47
+S_INITIAL = 0 #0 #250 #0#
 
 assert len(XI_LIST) == len(GAMMA_LIST) and torch.max(GAMMA_LIST) == GAMMA_LIST[-1]
 
 GAMMA_BAR = 1 / torch.sum(1 / GAMMA_LIST)
 GAMMA_MAX = torch.max(GAMMA_LIST)
 N_AGENT = len(XI_LIST)
+# BETA = GAMMA_BAR*S*ALPHA**2 + S_TERMINAL/TR
 
 ## Setup Numpy Counterparts
 GAMMA_LIST_NP = GAMMA_LIST.cpu().numpy().reshape((1, N_AGENT))
@@ -132,7 +156,7 @@ def get_mu_from_sigma(sigma_st, phi_stn, W_st):
 
 ## Training
 class S_0(nn.Module):
-    def __init__(self, s_init = 0):
+    def __init__(self, s_init = S_INITIAL):
         super(S_0, self).__init__()
         self.s_0 = nn.Linear(1, 1)
         torch.nn.init.constant_(self.s_0.weight, s_init)
@@ -177,9 +201,9 @@ class ModelFull(nn.Module):
 
 ## Construct arbitrary neural network models with optimizer and scheduler
 class ModelFactory:
-    def __init__(self, time_len, algo, input_dim, hidden_lst, output_dim, lr, decay, scheduler_step, use_s0 = False, solver = "Adam", retrain = False, constant_len = 0, drive_dir = "."):
+    def __init__(self, time_len, algo, input_dim, hidden_lst, output_dim, lr, decay, scheduler_step, use_s0 = False, solver = "Adam", retrain = False, constant_len = 0, drive_dir = ".", combo_offset = 0):
         assert solver in ["Adam", "SGD", "RMSprop"]
-        assert algo in ["generator", "discriminator", "combo"]
+        assert algo in ["generator", "discriminator", "combo", "fbsde"]
         self.lr = lr
         self.decay = decay
         self.scheduler_step = scheduler_step
@@ -194,6 +218,7 @@ class ModelFactory:
         self.use_s0 = use_s0
         self.constant_len = constant_len
         self.drive_dir = drive_dir
+        self.combo_offset = combo_offset
 
         if not retrain:
             self.model, self.prev_ts = self.load_latest()
@@ -210,9 +235,12 @@ class ModelFactory:
     def discretized_feedforward(self):
         model_list = nn.ModuleList()
         for _ in range(self.constant_len):
-            model = Net(1, self.hidden_lst, self.output_dim)
+            model = Net(1, self.hidden_lst, 1)
             model_list.append(model)
-        for _ in range(self.time_len - self.constant_len):
+        for _ in range(self.constant_len, self.combo_offset):
+            model = Net(self.input_dim, self.hidden_lst, 1)
+            model_list.append(model)
+        for _ in range(max(self.combo_offset, self.constant_len), self.time_len):
             model = Net(self.input_dim, self.hidden_lst, self.output_dim)
             model_list.append(model)
         return model_list
@@ -249,7 +277,7 @@ class ModelFactory:
             return None, None
         ts = ts_lst[0]
         print(f"Loading {self.drive_dir}/Models/{self.algo}__{ts}.pt")
-        model = torch.load(f"{self.drive_dir}/Models/{self.algo}__{ts}.pt")
+        model = torch.load(f"{self.drive_dir}/Models/{self.algo}__{ts}.pt", weights_only = False)
         model = model.to(device = DEVICE)
         return model, ts
 
@@ -284,10 +312,14 @@ class DynamicFactory():
             stock_st[:,0] = combo_model((-1, dummy_one)).reshape((-1,))
         ## Begin iteration
         sigma_s = None
-        if clearing_known:
-            combo_offset = self.T * (N_AGENT - 1)
+        if not use_true_mu:
+            combo_offset = self.T * 2
         else:
-            combo_offset = self.T * N_AGENT
+            combo_offset = self.T
+        # if clearing_known:
+        #     combo_offset = self.T * (N_AGENT - 1)
+        # else:
+        #     combo_offset = self.T * N_AGENT
         ## DEBUGGING!!!
 #         if F_exact is not None and H_exact is not None:
 #             phi_dot_stn, phi_stn, _, _, _ = self.ground_truth(F_exact, H_exact)
@@ -299,7 +331,7 @@ class DynamicFactory():
             ## Populate phi_bar
             for n in range(N_AGENT):
                 phi_bar_stn[:,t,n] = self.mu_bar / GAMMA_LIST[n] / ALPHA ** 2 - XI_LIST[n] / ALPHA * self.W_st[:,t]
-            delta_phi_stn = phi_stn[:,t,:n_agent_itr] - phi_bar_stn[:,t,:n_agent_itr]
+            delta_phi_stn = phi_stn[:,t,:] - phi_bar_stn[:,t,:]
             ## Mu Sigma perturbations
             perturb_sd = 2.0 #* ((t+1) * DT) ** 0.5
             perturb_phidot_sd = 100.0
@@ -315,7 +347,7 @@ class DynamicFactory():
             if combo_model is None:
                 sigma_s = torch.abs(dis_model((t, x_dis)).view((-1,)))
             else:
-                sigma_s = torch.abs(combo_model((combo_offset + t, x_dis)).reshape((-1,)))
+                sigma_s = torch.abs(combo_model((t, x_dis)).reshape((-1,)))
             sigma_st[:,t] = sigma_s
             # fast_var_stn = (phi_stn.clone()[:,t,:] * sigma_s.reshape((self.n_sample, 1)) + self.xi_stn[:,t,:]) * sigma_s.reshape((self.n_sample, 1))
             
@@ -327,7 +359,10 @@ class DynamicFactory():
                     x_mu = torch.cat((phi_stn[:,t,:], self.W_st[:,t].reshape((self.n_sample, 1)), curr_t), dim=1)
                 else:
                     x_mu = torch.cat((delta_phi_stn, self.W_st[:,t].reshape((self.n_sample, 1)), curr_t), dim=1) #torch.cat((phi_dot_stn[:,t,:], self.W_st[:,t].reshape((self.n_sample, 1)), curr_t), dim=1) #torch.cat((fast_var_stn, curr_t), dim=1) #
-                mu_s = dis_model((self.T + t, x_mu)).view((-1,))
+                if combo_model is None:
+                    mu_s = dis_model((self.T + t, x_mu)).view((-1,))
+                else:
+                    mu_s = combo_model((self.T + t, x_mu)).view((-1,))
             mu_st[:,t] = mu_s
             # if t < 10:
             #     mu_st[:,t] += GAMMA_BAR * (ALPHA ** 2) * S
@@ -338,13 +373,13 @@ class DynamicFactory():
             
             ## Generator output
             if not use_fast_var:
-                x_gen = torch.cat((mu_st[:,t].view((self.n_sample, 1)), sigma_st[:,t].view((self.n_sample, 1)), self.W_st[:,t].reshape((self.n_sample, 1)), curr_t), dim=1) #torch.cat((phi_stn[:,t,:], self.W_st[:,t].reshape((self.n_sample, 1)), curr_t), dim=1) #torch.cat((phi_stn[:,t,:], self.W_st[:,t].reshape((self.n_sample, 1)), curr_t), dim=1) #
+                x_gen = torch.cat((phi_stn[:,t,:], self.W_st[:,t].reshape((self.n_sample, 1)), curr_t), dim=1) #torch.cat((mu_st[:,t].view((self.n_sample, 1)), sigma_st[:,t].view((self.n_sample, 1)), self.W_st[:,t].reshape((self.n_sample, 1)), curr_t), dim=1) #torch.cat((phi_stn[:,t,:], self.W_st[:,t].reshape((self.n_sample, 1)), curr_t), dim=1) #
             else:
                 x_gen = torch.cat((delta_phi_stn, self.W_st[:,t].reshape((self.n_sample, 1)), curr_t), dim=1) #torch.cat((fast_var_stn, mu_s.reshape((self.n_sample, 1)), self.W_st[:,t].reshape((self.n_sample, 1)), curr_t), dim=1) #
             if combo_model is None:
                 phi_dot_stn[:,t,:n_agent_itr] = gen_model((t, x_gen))
             else:
-                phi_dot_stn[:,t,:n_agent_itr] = combo_model((t, x_gen))
+                phi_dot_stn[:,t,:n_agent_itr] = combo_model((combo_offset + t, x_gen))
             if perturb_phidot:
                 phi_dot_stn[:,t,:] += perturb_phidot
             phi_stn[:,t+1,:n_agent_itr] = phi_stn[:,t,:n_agent_itr] + phi_dot_stn[:,t,:n_agent_itr] * DT
@@ -352,6 +387,66 @@ class DynamicFactory():
                 phi_dot_stn[:,t,-1] = -torch.sum(phi_dot_stn[:,t,:-1], axis = 1)
                 phi_stn[:,t+1,-1] = S - torch.sum(phi_stn[:,t+1,:-1], axis = 1)
         return phi_dot_stn, phi_stn, mu_st, sigma_st, stock_st
+
+    def fbsde(self, model, use_fast_var = True, clearing_known = False, use_true_mu = False, power = 2):
+        phi_dot_stn = torch.zeros((self.n_sample, self.T, N_AGENT)).to(device = DEVICE)
+        phi_stn = torch.zeros((self.n_sample, self.T + 1, N_AGENT)).to(device = DEVICE)
+        phi_stn[:,0,:] = S * GAMMA_BAR / GAMMA_LIST
+        mu_st = torch.zeros((self.n_sample, self.T)).to(device = DEVICE)
+        sigma_st = torch.zeros((self.n_sample, self.T)).to(device = DEVICE)
+        stock_st = torch.zeros((self.n_sample, self.T + 1)).to(device = DEVICE)
+        dummy_one = torch.ones((self.n_sample * N_AGENT, 1)).to(device = DEVICE)
+        delta_phi_stn = torch.zeros((self.n_sample, self.T + 1, N_AGENT)).to(device = DEVICE)
+        delta_phi_dot_stn = torch.zeros((self.n_sample, self.T, N_AGENT)).to(device = DEVICE)
+        Y_stn = torch.zeros((self.n_sample, self.T + 1, N_AGENT)).to(device = DEVICE)
+        Y_stn[:,0,:] = model((-1, dummy_one)).view((self.n_sample, N_AGENT))
+        Y_dot_stn = torch.zeros((self.n_sample, self.T, N_AGENT)).to(device = DEVICE)
+        Z_stn = torch.zeros((self.n_sample, self.T, N_AGENT)).to(device = DEVICE)
+
+        n_agent_itr = N_AGENT
+        if clearing_known:
+            n_agent_itr -= 1
+        if power != 2 and N_AGENT > 2:
+            assert not use_true_mu
+        if not use_true_mu:
+            offset = self.T * 2
+        else:
+            offset = self.T
+        
+        for t in range(self.T):
+            curr_t = torch.ones((self.n_sample, 1)).to(device = DEVICE)
+            x_sigma = torch.cat((delta_phi_stn[:,t,:], self.W_st[:,t].reshape((self.n_sample, 1)), Y_stn[:,t,:], curr_t), dim=1) #curr_t.reshape((self.n_sample, 1))
+            sigma_s = torch.abs(model((t, x_sigma)).view((-1,)))
+            sigma_st[:,t] = sigma_s
+            if use_true_mu:
+                mu_s = get_mu_from_sigma(sigma_s.reshape((self.n_sample, 1)), phi_stn[:,t,:].reshape((self.n_sample, 1, N_AGENT)), self.W_st[:,t].reshape((self.n_sample, 1))).reshape((-1,))
+            else:
+                if not use_fast_var:
+                    x_mu = torch.cat((phi_stn[:,t,:], self.W_st[:,t].reshape((self.n_sample, 1)), curr_t), dim=1)
+                else:
+                    x_mu = torch.cat((delta_phi_stn[:,t,:], self.W_st[:,t].reshape((self.n_sample, 1)), Y_stn[:,t,:], curr_t), dim=1)
+                mu_s = model((self.T + t, x_mu)).view((-1,))
+            mu_st[:,t] = mu_s
+            phi_dot_stn[:,t,:n_agent_itr] = torch.sign(Y_stn[:,t,:n_agent_itr]) * torch.abs(Y_stn[:,t,:n_agent_itr] / LAM) ** (1 / (power - 1))
+            if clearing_known:
+                phi_dot_stn[:,t,-1] = -torch.sum(phi_dot_stn[:,t,:-1], axis = 1)
+
+            if not use_fast_var:
+                x_gen = torch.cat((phi_stn[:,t,:], self.W_st[:,t].reshape((self.n_sample, 1)), curr_t), dim=1)
+            else:
+                x_gen = torch.cat((delta_phi_stn[:,t,:], self.W_st[:,t].reshape((self.n_sample, 1)), Y_stn[:,t,:], curr_t), dim=1)
+            Z_sn = model((offset + t, x_gen)).view((self.n_sample, n_agent_itr))
+            Z_stn[:,t,:n_agent_itr] = Z_sn
+            for n in range(n_agent_itr):
+                d_delta_phi = Y_stn[:,t,n] / LAM * DT + XI_LIST[n] / ALPHA * self.dW_st[:,t]
+                delta_phi_dot_stn[:,t,n] = d_delta_phi
+                Y_dot_stn[:,t,n] = (GAMMA_LIST[n] * sigma_s * (sigma_s * phi_stn[:,t,n].clone() + XI_LIST[n] * self.W_st[:,t]) - mu_s) * DT + Z_sn[:,n] * self.dW_st[:,t]
+            Y_stn[:,t+1,:n_agent_itr] = Y_stn[:,t,:n_agent_itr] + Y_dot_stn[:,t,:n_agent_itr]
+            delta_phi_stn[:,t+1,:n_agent_itr] = delta_phi_stn[:,t,:n_agent_itr] + delta_phi_dot_stn[:,t,:n_agent_itr]
+            phi_stn[:,t+1,:] = phi_stn[:,t,:] + phi_dot_stn[:,t,:] * DT
+            stock_st[:,t+1] = stock_st[:,t] + mu_st[:,t] * DT + sigma_s * self.dW_st[:,t]
+        target = BETA * TR + ALPHA * self.W_st[:,-1]
+        return phi_dot_stn, phi_stn, mu_st, sigma_st, stock_st, Y_stn
     
     def g_vec(self, x, q = 3/2):
         x_ind = torch.round((torch.abs(x) + 0) / 50 * 500000).long()
@@ -402,7 +497,8 @@ class DynamicFactory():
                 sigma_st[:,t] = ALPHA + (GAMMA_1 - GAMMA_2) / (GAMMA_1 + GAMMA_2) * (LAM / (2 ** (power - 1) * power)) ** (2 / (power + 2)) * ((GAMMA_1 + GAMMA_2) / 2 * ALPHA ** 2) ** (power / (power + 2)) * (ALPHA / XI_LIST[0]) ** ((4 - 2 * power) / (power + 2)) * g_tilda_prime_0 * XI_LIST[0] / ALPHA
                 mu_st[:,t] = GAMMA_BAR * S * sigma_st[:,t] ** 2 + 1/2 * (GAMMA_1 - GAMMA_2) * sigma_st[:,t] ** 2 * delta_phi_stn[:,t,0] + 1/2 * XI_LIST[0] * sigma_st[:,t] / ALPHA * (GAMMA_1 - GAMMA_2) * (ALPHA - sigma_st[:,t]) * self.W_st[:,t+1]
                 stock_st[:,t+1] = stock_st[:,t] + mu_st[:,t] * DT + sigma_st[:,t] * self.dW_st[:,t]
-        stock_st = stock_st + s0
+        target = BETA * TR + ALPHA * self.W_st[:,-1]
+        stock_st = stock_st + s0 #(target - stock_st[:,-1]).reshape((self.n_sample, 1))
         return phi_dot_stn, phi_stn, mu_st, sigma_st, stock_st
     
     def ground_truth(self, F_exact, H_exact):
@@ -423,14 +519,14 @@ class DynamicFactory():
             phi_stn[:,t+1,:] = phi_stn[:,t,:] + phi_dot_stn[:,t,:] * DT
             mu_st[:,t] = get_mu_from_sigma(sigma_st[:,t].reshape((self.n_sample, 1)), phi_stn[:,t,:].reshape((self.n_sample, 1, N_AGENT)), self.W_st[:,t].reshape((self.n_sample, 1))).reshape((-1,))
             stock_st[:,t+1] = stock_st[:,t] + mu_st[:,t] * DT + sigma_st[:,t] * self.dW_st[:,t]
-        target = self.stock_terminal()
+        target = BETA * TR + ALPHA * self.W_st[:,-1]
         stock_st = stock_st + (target - stock_st[:,-1]).reshape((self.n_sample, 1))
         return phi_dot_stn, phi_stn, mu_st, sigma_st, stock_st
 
     def frictionless_stock(self):
         mu_bar = GAMMA_BAR * (ALPHA ** 2) * S
         sigma_bar = ALPHA
-        target = self.stock_terminal()
+        target = BETA * TR + ALPHA * self.W_st[:,-1]
         stock_st = torch.zeros((self.n_sample, self.T + 1)).to(device = DEVICE)
         for t in range(T):
             stock_st[:,t+1] = stock_st[:,t] + mu_bar * DT + sigma_bar * self.dW_st[:,t]
@@ -444,8 +540,8 @@ class DynamicFactory():
             mu_st[:,t] = mu_bar
         return mu_st
     
-    def stock_terminal(self):
-        return BETA * TR + ALPHA * self.W_st[:,-1]
+    def pasting(self):
+        pass
 
 class LossFactory():
     def __init__(self, dW_st, W_s0 = None, normalize = False):
@@ -484,6 +580,13 @@ class LossFactory():
             loss_arr += loss_curr
         loss_mean, loss_se = torch.mean(loss_arr), torch.std(loss_arr) / (n_sample ** 0.5)
         return loss_mean, loss_se
+
+    def fbsde_loss(self, Y_stn, stock_st, power = 2):
+        target = BETA * TR + ALPHA * self.W_st[:,-1]
+        stock_loss = torch.mean(torch.abs(stock_st[:,-1] - target) ** power)
+        y_loss = torch.mean(torch.abs(Y_stn[:,-1,:]) ** power)
+        loss = stock_loss + y_loss
+        return loss
     
     def clearing_loss(self, phi_dot_stn, power = 2):
         loss = torch.abs(torch.sum(phi_dot_stn, axis = 2) / N_AGENT) ** power
@@ -680,7 +783,7 @@ def visualize_comparison(timestamps, arr_lst, round, ts, name, algo_lst, comment
 def prepare_generator(gen_hidden_lst, gen_lr, gen_decay, gen_scheduler_step, gen_solver = "Adam", use_pretrained_gen = True, use_fast_var = False, clearing_known = True, drive_dir = "."):
     retrain = not use_pretrained_gen
     if not use_fast_var:
-        input_dim = 4 #+ N_AGENT #2 + N_AGENT
+        input_dim = 2 + N_AGENT #+ N_AGENT #2 + N_AGENT
     else:
         input_dim = 2 + N_AGENT #2 + N_AGENT
     n_model = T #T * (N_AGENT - 1)
@@ -689,8 +792,8 @@ def prepare_generator(gen_hidden_lst, gen_lr, gen_decay, gen_scheduler_step, gen
     output_dim = N_AGENT - 1
     if not clearing_known:
         output_dim += 1
-    if clearing_known:
-        input_dim -= 1
+#    if clearing_known:
+#        input_dim -= 1
     model_factory = ModelFactory(n_model, "generator", input_dim, gen_hidden_lst, output_dim, gen_lr, gen_decay, gen_scheduler_step, use_s0 = False, solver = gen_solver, retrain = retrain, drive_dir = drive_dir)
     return model_factory
 
@@ -703,30 +806,38 @@ def prepare_discriminator(dis_hidden_lst, dis_lr, dis_decay, dis_scheduler_step,
         input_dim = 2 + N_AGENT #2 + N_AGENT
     else:
         input_dim = 2 + N_AGENT
-    if clearing_known:
-        input_dim -= 1
+#    if clearing_known:
+#        input_dim -= 1
     model_factory = ModelFactory(n_model, "discriminator", input_dim, dis_hidden_lst, 1, dis_lr, dis_decay, dis_scheduler_step, use_s0 = True, solver = dis_solver, retrain = retrain, constant_len = T, drive_dir = drive_dir)
     return model_factory
 
-def prepare_combo(combo_hidden_lst, combo_lr, combo_decay, combo_scheduler_step, combo_solver = "Adam", use_pretrained_combo = True, use_true_mu = False, use_fast_var = False, clearing_known = True):
-    n_model = T * (N_AGENT - 1) + T + 1
-    if not clearing_known:
-        n_model += T
+def prepare_combo(combo_hidden_lst, combo_lr, combo_decay, combo_scheduler_step, combo_solver = "Adam", use_pretrained_combo = True, use_true_mu = False, use_fast_var = False, clearing_known = True, model_name = "combo", drive_dir = "."):
+    n_model = T + T + 1
+    constant_len = T
     if not use_true_mu:
         n_model += T
     retrain = not use_pretrained_combo
     if not use_fast_var:
         input_dim = 2 + N_AGENT
     else:
-        input_dim = 1 + N_AGENT
-    model_factory = ModelFactory(n_model, "combo", input_dim, combo_hidden_lst, 1, combo_lr, combo_decay, combo_scheduler_step, use_s0 = True, solver = combo_solver, retrain = retrain, constant_len = 0)
+        input_dim = 2 + N_AGENT
+    if model_name == "fbsde":
+        input_dim = 2 + 2 * N_AGENT
+        constant_len = 0
+    output_dim = N_AGENT - 1
+    if not clearing_known:
+        output_dim += 1
+    combo_offset = T
+    if not use_true_mu:
+        combo_offset += T
+    model_factory = ModelFactory(n_model, model_name, input_dim, combo_hidden_lst, output_dim, combo_lr, combo_decay, combo_scheduler_step, use_s0 = True, solver = combo_solver, retrain = retrain, constant_len = constant_len, drive_dir = drive_dir, combo_offset = combo_offset)
     return model_factory
 
 def slc(lst, idx):
     return lst[min(idx, len(lst) - 1)]
 
 def train_single(generator, discriminator, optimizer, scheduler, epoch, sample_size, use_true_mu, use_fast_var, train_type, F_exact, H_exact, dis_loss = 1, ckpt_freq = 10000, model_factory = None, curr_ts = None, combo_model = None, clearing_known = True, normalize = False, utility_power = 2, normalize_y = False, y_coef = 1):
-    assert train_type in ["generator", "discriminator", "combo"]
+    assert train_type in ["generator", "discriminator", "combo", "fbsde"]
     loss_arr = []
     for itr in tqdm(range(epoch)):
         optimizer.zero_grad()
@@ -735,6 +846,8 @@ def train_single(generator, discriminator, optimizer, scheduler, epoch, sample_s
         loss_factory = LossFactory(dW_st, normalize = normalize)
         if train_type == "combo":
             phi_dot_stn, phi_stn, mu_st, sigma_st, stock_st = dynamic_factory.deep_hedging(None, None, use_true_mu = use_true_mu, use_fast_var = use_fast_var, combo_model = combo_model, clearing_known = clearing_known)
+        elif train_type == "fbsde":
+            phi_dot_stn, phi_stn, mu_st, sigma_st, stock_st, Y_stn = dynamic_factory.fbsde(combo_model, use_fast_var = use_fast_var, clearing_known = clearing_known, use_true_mu = use_true_mu, power = COST_POWER)
         else:
             phi_dot_stn, phi_stn, mu_st, sigma_st, stock_st = dynamic_factory.deep_hedging(generator, discriminator, use_true_mu = use_true_mu, use_fast_var = use_fast_var, clearing_known = clearing_known, F_exact = F_exact, H_exact = H_exact, perturb_musigma = False, perturb_phidot = False) #perturb_musigma = train_type == "generator", perturb_phidot = train_type == "discriminator"
         if train_type == "generator":
@@ -749,8 +862,20 @@ def train_single(generator, discriminator, optimizer, scheduler, epoch, sample_s
                 stock_loss *= stock_clearing_loss_ratio
             # clearing_loss *= clearing_stock_loss_ratio
             loss = stock_loss + clearing_loss + loss_factory.regularize_loss(sigma_st, C = 1e-3) + loss_factory.regularize_loss(mu_st, C = 1e-3) #+ loss_factory.utility_loss(phi_dot_stn, phi_stn, mu_st, sigma_st, power = utility_power)
+        elif train_type == "combo":
+            #loss = loss_factory.utility_loss(phi_dot_stn, phi_stn, mu_st, sigma_st, power = utility_power) + loss_factory.stock_loss(stock_st, power = dis_loss) + loss_factory.clearing_loss(phi_dot_stn, power = dis_loss)
+            loss_gen = loss_factory.utility_loss(phi_dot_stn, phi_stn, mu_st, sigma_st, power = utility_power) + loss_factory.regularize_loss(phi_dot_stn, C = 1e-3) + loss_factory.clearing_loss(phi_dot_stn, power = dis_loss)
+            stock_loss = loss_factory.stock_loss(stock_st, power = dis_loss)
+            clearing_loss = loss_factory.clearing_loss_y(phi_dot_stn, phi_stn, mu_st, sigma_st, power = utility_power, normalize = normalize_y, y_coef = y_coef)
+            if itr == 0:
+                stock_clearing_loss_ratio = clearing_loss.data * 3000 / (stock_loss.data * 1) #3000 #min(stock_loss.data * 100 / clearing_loss.data, 1)
+                # clearing_stock_loss_ratio = stock_loss.data / clearing_loss.data * 100
+            if not use_true_mu:
+                stock_loss *= stock_clearing_loss_ratio
+            loss_dis = stock_loss + clearing_loss + loss_factory.regularize_loss(sigma_st, C = 1e-3) + loss_factory.regularize_loss(mu_st, C = 1e-3)
+            loss = loss_gen + loss_dis
         else:
-            loss = loss_factory.utility_loss(phi_dot_stn, phi_stn, mu_st, sigma_st, power = utility_power) + loss_factory.stock_loss(stock_st, power = dis_loss) + loss_factory.clearing_loss(phi_dot_stn, power = dis_loss)
+            loss = loss_factory.fbsde_loss(Y_stn, stock_st, power = dis_loss) + loss_factory.clearing_loss(phi_dot_stn, power = dis_loss) + loss_factory.regularize_loss(sigma_st, C = 1e-3) + loss_factory.regularize_loss(mu_st, C = 1e-3)
         assert not torch.isnan(loss.data)
         loss.backward()
         if train_type in ["generator", "combo"]:
@@ -785,7 +910,7 @@ def train_single(generator, discriminator, optimizer, scheduler, epoch, sample_s
     loss_truth_final = float(loss_truth_final.data)
     return model, loss_arr, loss_truth_final
 
-def training_pipeline(gen_hidden_lst, gen_lr, gen_decay, gen_scheduler_step, gen_solver, gen_epoch, gen_sample, use_pretrained_gen, dis_hidden_lst, dis_lr, dis_decay, dis_scheduler_step, dis_solver, dis_epoch, dis_sample, use_pretrained_dis, combo_hidden_lst, combo_lr, combo_decay, combo_scheduler_step, combo_solver, combo_epoch, combo_sample, use_pretrained_combo, dis_loss = [1], y_coef_lst = [1], utility_power = 2, use_true_mu = False, use_fast_var = False, total_rounds = 1, normalize_up_to = 0, train_gen = True, train_dis = True, last_round_dis = True, visualize_obs = 0, seed = 0, ckpt_freq = 10000, use_combo = False, clearing_known = True, train_args = None):
+def training_pipeline(gen_hidden_lst, gen_lr, gen_decay, gen_scheduler_step, gen_solver, gen_epoch, gen_sample, use_pretrained_gen, dis_hidden_lst, dis_lr, dis_decay, dis_scheduler_step, dis_solver, dis_epoch, dis_sample, use_pretrained_dis, combo_hidden_lst, combo_lr, combo_decay, combo_scheduler_step, combo_solver, combo_epoch, combo_sample, use_pretrained_combo, dis_loss = [1], y_coef_lst = [1], utility_power = 2, use_true_mu = False, use_fast_var = False, total_rounds = 1, normalize_up_to = 0, train_gen = True, train_dis = True, last_round_dis = True, visualize_obs = 0, seed = 0, ckpt_freq = 10000, use_combo = False, use_fbsde = False, clearing_known = True, train_args = None):
     ## Generate Brownian paths for testing
     torch.manual_seed(seed)
     dW_st_eval = torch.normal(0, np.sqrt(DT), size = (N_SAMPLE, T))
@@ -831,13 +956,16 @@ def training_pipeline(gen_hidden_lst, gen_lr, gen_decay, gen_scheduler_step, gen
                 model_factory_dis.save_to_file(curr_ts)
                 visualize_loss(loss_arr_dis, gan_round, "discriminator", curr_ts, loss_truth_final_dis)
         else:
-            model_factory_combo = prepare_combo(combo_hidden_lst, slc(combo_lr, gan_round), combo_decay, combo_scheduler_step, combo_solver = slc(combo_solver, gan_round), use_pretrained_combo = use_pretrained_combo or gan_round > 0, use_true_mu = use_true_mu, use_fast_var = use_fast_var, clearing_known = clearing_known)
+            model_name = "combo"
+            if use_fbsde:
+                model_name = "fbsde"
+            model_factory_combo = prepare_combo(combo_hidden_lst, slc(combo_lr, gan_round), combo_decay, combo_scheduler_step, combo_solver = slc(combo_solver, gan_round), use_pretrained_combo = use_pretrained_combo or gan_round > 0, use_true_mu = use_true_mu, use_fast_var = use_fast_var, clearing_known = clearing_known, model_name = model_name)
             combo, optimizer_combo, scheduler_combo, prev_ts_combo = model_factory_combo.prepare_model()
-            print("\tTraining Discriminator...")
-            combo, loss_arr_combo, loss_truth_final_combo = train_single(None, None, optimizer_combo, scheduler_combo, slc(combo_epoch, gan_round), slc(combo_sample, gan_round), use_true_mu, use_fast_var, "combo", F_exact, H_exact, dis_loss = slc(dis_loss, gan_round), ckpt_freq = ckpt_freq, model_factory = model_factory_combo, curr_ts = curr_ts, combo_model = combo, clearing_known = clearing_known, utility_power = utility_power, y_coef = slc(y_coef_lst, gan_round))
+            print("\tTraining Combo...")
+            combo, loss_arr_combo, loss_truth_final_combo = train_single(None, None, optimizer_combo, scheduler_combo, slc(combo_epoch, gan_round), slc(combo_sample, gan_round), use_true_mu, use_fast_var, model_name, F_exact, H_exact, dis_loss = slc(dis_loss, gan_round), ckpt_freq = ckpt_freq, model_factory = model_factory_combo, curr_ts = curr_ts, combo_model = combo, clearing_known = clearing_known, utility_power = utility_power, y_coef = slc(y_coef_lst, gan_round))
             model_factory_combo.update_model(combo)
             model_factory_combo.save_to_file(curr_ts)
-            visualize_loss(loss_arr_combo, gan_round, "combo", curr_ts, loss_truth_final_combo)
+            visualize_loss(loss_arr_combo, gan_round, model_name, curr_ts, loss_truth_final_combo)
         ## Evaluation per round
         dynamic_factory = DynamicFactory(dW_st_eval)
         loss_factory = LossFactory(dW_st_eval)
@@ -848,7 +976,10 @@ def training_pipeline(gen_hidden_lst, gen_lr, gen_decay, gen_scheduler_step, gen
         if not use_combo:
             phi_dot_stn, phi_stn, mu_st, sigma_st, stock_st = dynamic_factory.deep_hedging(generator, discriminator, use_true_mu = use_true_mu, use_fast_var = use_fast_var, clearing_known = clearing_known, F_exact = F_exact, H_exact = H_exact)
         else:
-            phi_dot_stn, phi_stn, mu_st, sigma_st, stock_st = dynamic_factory.deep_hedging(None, None, use_true_mu = use_true_mu, use_fast_var = use_fast_var, combo_model = combo, clearing_known = clearing_known)
+            if not use_fbsde:
+                phi_dot_stn, phi_stn, mu_st, sigma_st, stock_st = dynamic_factory.deep_hedging(None, None, use_true_mu = use_true_mu, use_fast_var = use_fast_var, combo_model = combo, clearing_known = clearing_known)
+            else:
+                phi_dot_stn, phi_stn, mu_st, sigma_st, stock_st, Y_stn = dynamic_factory.fbsde(combo, use_fast_var = use_fast_var, clearing_known = clearing_known, use_true_mu = use_true_mu, power = COST_POWER)
         loss_utility = loss_factory.utility_loss(phi_dot_stn, phi_stn, mu_st, sigma_st, power = utility_power) * S_VAL
         loss_stock = loss_factory.stock_loss(stock_st, power = slc(dis_loss, gan_round))
         loss_clearing = loss_factory.clearing_loss(phi_dot_stn, power = utility_power)
@@ -998,10 +1129,7 @@ def inference(generator, discriminator, randomized = True, clearing_known = Fals
         # visualize_infer(phi_gamma_s, [mu_s, mu_s_true], "mu_phigamma", "\sum_n phi_n * gamma_n", "mu", ["Model", "Truth"], title = "")
     return mu_st, sigma_st, delta_phi_stn, mu_st_true
 
-def transfer_learning():
-    pass
-
-def compute_trajectory(gen_hidden_lst, gen_lr, gen_decay, gen_scheduler_step, gen_solver, dis_hidden_lst, dis_lr, dis_decay, dis_scheduler_step, dis_solver, dis_loss, use_true_mu = False, use_fast_var = False, seed = 0, clearing_known = True, utility_power = 2, drive_dir = "."):
+def compute_trajectory(gen_hidden_lst, gen_lr, gen_decay, gen_scheduler_step, gen_solver, dis_hidden_lst, dis_lr, dis_decay, dis_scheduler_step, dis_solver, dis_loss, combo_hidden_lst, combo_lr, combo_decay, combo_scheduler_step, combo_solver, use_true_mu = False, use_fast_var = False, seed = 0, clearing_known = True, utility_power = 2, drive_dir = "."):
     ## Generate Brownian paths for testing
     torch.manual_seed(seed)
     dW_st_eval = torch.normal(0, np.sqrt(DT), size = (N_SAMPLE, T))
@@ -1009,38 +1137,115 @@ def compute_trajectory(gen_hidden_lst, gen_lr, gen_decay, gen_scheduler_step, ge
     benchmark_name = "Ground Truth"
     if utility_power != 2:
         benchmark_name = "Leading Order"
-    model_factory_gen = prepare_generator(gen_hidden_lst, slc(gen_lr, 0), gen_decay, gen_scheduler_step, gen_solver = slc(gen_solver, 0), use_pretrained_gen = True, use_fast_var = use_fast_var, clearing_known = clearing_known, drive_dir = drive_dir)
-    model_factory_dis = prepare_discriminator(dis_hidden_lst, slc(dis_lr, 0), dis_decay, dis_scheduler_step, dis_solver = slc(dis_solver, 0), use_pretrained_dis = True, use_true_mu = use_true_mu, use_fast_var = use_fast_var, drive_dir = drive_dir)
-    generator, optimizer_gen, scheduler_gen, prev_ts_gen = model_factory_gen.prepare_model()
-    discriminator, optimizer_dis, scheduler_dis, prev_ts_dis = model_factory_dis.prepare_model()
-
     dynamic_factory = DynamicFactory(dW_st_eval)
     loss_factory = LossFactory(dW_st_eval)
+    
+    if clearing_known:
+        clearing_dir = "ClearingKnown/"
+    else:
+        clearing_dir = "ClearingUnknown/"
+    
+    ## GAN
+    model_factory_gen = prepare_generator(gen_hidden_lst, slc(gen_lr, 0), gen_decay, gen_scheduler_step, gen_solver = slc(gen_solver, 0), use_pretrained_gen = True, use_fast_var = use_fast_var, clearing_known = clearing_known, drive_dir = "GANResults/" + clearing_dir + drive_dir)
+    model_factory_dis = prepare_discriminator(dis_hidden_lst, slc(dis_lr, 0), dis_decay, dis_scheduler_step, dis_solver = slc(dis_solver, 0), use_pretrained_dis = True, use_true_mu = use_true_mu, use_fast_var = use_fast_var, drive_dir = "GANResults/" + clearing_dir + drive_dir)
+    generator, optimizer_gen, scheduler_gen, prev_ts_gen = model_factory_gen.prepare_model()
+    discriminator, optimizer_dis, scheduler_dis, prev_ts_dis = model_factory_dis.prepare_model()
     phi_dot_stn, phi_stn, mu_st, sigma_st, stock_st = dynamic_factory.deep_hedging(generator, discriminator, use_true_mu = use_true_mu, use_fast_var = use_fast_var, clearing_known = clearing_known, F_exact = F_exact, H_exact = H_exact)
     loss_utility_mean, loss_utility_se = loss_factory.utility_loss_stats(phi_dot_stn, phi_stn, mu_st, sigma_st, power = utility_power)
     loss_utility_mean, loss_utility_se = loss_utility_mean * S_VAL, loss_utility_se * S_VAL
     loss_stock_mean, loss_stock_se = loss_factory.stock_loss_stats(stock_st, power = 2)
     loss_clearing_mean, loss_clearing_se = loss_factory.clearing_loss_stats(phi_dot_stn, power = 2)
+    ## Combo
+#    clearing_known = True
+    try:
+        model_factory_combo = prepare_combo(combo_hidden_lst, slc(combo_lr, 0), combo_decay, combo_scheduler_step, combo_solver = slc(combo_solver, 0), use_pretrained_combo = True, use_true_mu = use_true_mu, use_fast_var = use_fast_var, clearing_known = clearing_known, model_name = "combo", drive_dir = "ComboResults/" + clearing_dir + drive_dir)
+        combo_model, _, _, _ = model_factory_combo.prepare_model()
+        phi_dot_stn_combo, phi_stn_combo, mu_st_combo, sigma_st_combo, stock_st_combo = dynamic_factory.deep_hedging(None, None, use_true_mu = use_true_mu, use_fast_var = use_fast_var, combo_model = combo_model, clearing_known = clearing_known, F_exact = F_exact, H_exact = H_exact)
+        loss_combo_utility_mean, loss_combo_utility_se = loss_factory.utility_loss_stats(phi_dot_stn_combo, phi_stn_combo, mu_st_combo, sigma_st_combo, power = utility_power)
+        loss_combo_utility_mean, loss_combo_utility_se = loss_combo_utility_mean * S_VAL, loss_combo_utility_se * S_VAL
+        loss_combo_stock_mean, loss_combo_stock_se = loss_factory.stock_loss_stats(stock_st_combo, power = 2)
+        loss_combo_clearing_mean, loss_combo_clearing_se = loss_factory.clearing_loss_stats(phi_dot_stn_combo, power = 2)
+    except:
+        phi_dot_stn_combo, phi_stn_combo, mu_st_combo, sigma_st_combo, stock_st_combo, loss_combo_utility_mean, loss_combo_utility_se, loss_combo_stock_mean, loss_combo_stock_se, loss_combo_clearing_mean, loss_combo_clearing_se = [None] * 11
+    ## FBSDE
+    try:
+        model_factory_fbsde = prepare_combo(combo_hidden_lst, slc(combo_lr, 0), combo_decay, combo_scheduler_step, combo_solver = slc(combo_solver, 0), use_pretrained_combo = True, use_true_mu = use_true_mu, use_fast_var = use_fast_var, clearing_known = clearing_known, model_name = "fbsde", drive_dir = "FBSDEResults/" + clearing_dir + drive_dir)
+        fbsde_model, _, _, _ = model_factory_fbsde.prepare_model()
+        phi_dot_stn_fbsde, phi_stn_fbsde, mu_st_fbsde, sigma_st_fbsde, stock_st_fbsde, _ = dynamic_factory.fbsde(fbsde_model, use_fast_var = use_fast_var, clearing_known = clearing_known, use_true_mu = use_true_mu, power = utility_power)
+        loss_fbsde_utility_mean, loss_fbsde_utility_se = loss_factory.utility_loss_stats(phi_dot_stn_fbsde, phi_stn_fbsde, mu_st_fbsde, sigma_st_fbsde, power = utility_power)
+        loss_fbsde_utility_mean, loss_fbsde_utility_se = loss_fbsde_utility_mean * S_VAL, loss_fbsde_utility_se * S_VAL
+        loss_fbsde_stock_mean, loss_fbsde_stock_se = loss_factory.stock_loss_stats(stock_st_fbsde, power = 2)
+        loss_fbsde_clearing_mean, loss_fbsde_clearing_se = loss_factory.clearing_loss_stats(phi_dot_stn_fbsde, power = 2)
+    except:
+        phi_dot_stn_fbsde, phi_stn_fbsde, mu_st_fbsde, sigma_st_fbsde, stock_st_fbsde, loss_fbsde_utility_mean, loss_fbsde_utility_se, loss_fbsde_stock_mean, loss_fbsde_stock_se, loss_fbsde_clearing_mean, loss_fbsde_clearing_se = [None] * 11
+    ## Ground truth/leading order
     if utility_power == 2:
         phi_dot_stn_truth, phi_stn_truth, mu_st_truth, sigma_st_truth, stock_st_truth = dynamic_factory.ground_truth(F_exact, H_exact)
     else:
         phi_dot_stn_truth, phi_stn_truth, mu_st_truth, sigma_st_truth, stock_st_truth = dynamic_factory.leading_order(power = utility_power)
-    stock_st_frictionless = dynamic_factory.frictionless_stock()
-    mu_st_frictionless = dynamic_factory.frictionless_mu()
     loss_truth_utility_mean, loss_truth_utility_se = loss_factory.utility_loss_stats(phi_dot_stn_truth, phi_stn_truth, mu_st_truth, sigma_st_truth, power = utility_power)
     loss_truth_utility_mean, loss_truth_utility_se = loss_truth_utility_mean * S_VAL, loss_truth_utility_se * S_VAL
     loss_truth_stock_mean, loss_truth_stock_se = loss_factory.stock_loss_stats(stock_st_truth, power = slc(dis_loss, 0))
     loss_truth_clearing_mean, loss_truth_clearing_se = loss_factory.clearing_loss_stats(phi_dot_stn_truth, power = 2)
-    return phi_dot_stn, phi_stn, mu_st, sigma_st, stock_st, loss_utility_mean, loss_utility_se, loss_stock_mean, loss_stock_se, loss_clearing_mean, loss_clearing_se, phi_dot_stn_truth, phi_stn_truth, mu_st_truth, sigma_st_truth, stock_st_truth, loss_truth_utility_mean, loss_truth_utility_se, loss_truth_stock_mean, loss_truth_stock_se, loss_truth_clearing_mean, loss_truth_clearing_se
 
-def plot_all_trajectories(gen_hidden_lst, gen_lr, gen_decay, gen_scheduler_step, gen_solver, dis_hidden_lst, dis_lr, dis_decay, dis_scheduler_step, dis_solver, dis_loss, use_fast_var = False, seed = 0, clearing_known = False, utility_power = 2, **train_args):
+    return (phi_dot_stn, phi_stn, mu_st, sigma_st, stock_st, loss_utility_mean, loss_utility_se, loss_stock_mean, loss_stock_se, loss_clearing_mean, loss_clearing_se,
+        phi_dot_stn_combo, phi_stn_combo, mu_st_combo, sigma_st_combo, stock_st_combo, loss_combo_utility_mean, loss_combo_utility_se, loss_combo_stock_mean, loss_combo_stock_se, loss_combo_clearing_mean, loss_combo_clearing_se,
+        phi_dot_stn_fbsde, phi_stn_fbsde, mu_st_fbsde, sigma_st_fbsde, stock_st_fbsde, loss_fbsde_utility_mean, loss_fbsde_utility_se, loss_fbsde_stock_mean, loss_fbsde_stock_se, loss_fbsde_clearing_mean, loss_fbsde_clearing_se,
+        phi_dot_stn_truth, phi_stn_truth, mu_st_truth, sigma_st_truth, stock_st_truth, loss_truth_utility_mean, loss_truth_utility_se, loss_truth_stock_mean, loss_truth_stock_se, loss_truth_clearing_mean, loss_truth_clearing_se)
+
+def safe_detach(x):
+    if x is not None:
+        return float(x.detach())
+    else:
+        return float(np.nan)
+
+def plot_all_trajectories(gen_hidden_lst, gen_lr, gen_decay, gen_scheduler_step, gen_solver, dis_hidden_lst, dis_lr, dis_decay, dis_scheduler_step, dis_solver, dis_loss, combo_hidden_lst, combo_lr, combo_decay, combo_scheduler_step, combo_solver, use_fast_var = False, seed = 0, clearing_known = False, utility_power = 2, **train_args):
     drive_dir = f"{N_AGENT}agents_power{utility_power}"
-    phi_dot_stn_nomu, phi_stn_nomu, mu_st_nomu, sigma_st_nomu, stock_st_nomu, loss_utility_mean_nomu, loss_utility_se_nomu, loss_stock_mean_nomu, loss_stock_se_nomu, loss_clearing_mean_nomu, loss_clearing_se_nomu, phi_dot_stn_truth, phi_stn_truth, mu_st_truth, sigma_st_truth, stock_st_truth, loss_truth_utility_mean, loss_truth_utility_se, loss_truth_stock_mean, loss_truth_stock_se, loss_truth_clearing_mean, loss_truth_clearing_se = compute_trajectory(gen_hidden_lst, gen_lr, gen_decay, gen_scheduler_step, gen_solver, dis_hidden_lst, dis_lr, dis_decay, dis_scheduler_step, dis_solver, dis_loss, use_true_mu = False, use_fast_var = use_fast_var, seed = seed, clearing_known = clearing_known, utility_power = utility_power, drive_dir = drive_dir + "_mu_unknown")
+    (phi_dot_stn_nomu, phi_stn_nomu, mu_st_nomu, sigma_st_nomu, stock_st_nomu, loss_utility_mean_nomu, loss_utility_se_nomu, loss_stock_mean_nomu, loss_stock_se_nomu, loss_clearing_mean_nomu, loss_clearing_se_nomu,
+    phi_dot_stn_combo_nomu, phi_stn_combo_nomu, mu_st_combo_nomu, sigma_st_combo_nomu, stock_st_combo_nomu, loss_combo_utility_mean_nomu, loss_combo_utility_se_nomu, loss_combo_stock_mean_nomu, loss_combo_stock_se_nomu, loss_combo_clearing_mean_nomu, loss_combo_clearing_se_nomu,
+    phi_dot_stn_fbsde_nomu, phi_stn_fbsde_nomu, mu_st_fbsde_nomu, sigma_st_fbsde_nomu, stock_st_fbsde_nomu, loss_fbsde_utility_mean_nomu, loss_fbsde_utility_se_nomu, loss_fbsde_stock_mean_nomu, loss_fbsde_stock_se_nomu, loss_fbsde_clearing_mean_nomu, loss_fbsde_clearing_se_nomu,
+    phi_dot_stn_truth, phi_stn_truth, mu_st_truth, sigma_st_truth, stock_st_truth, loss_truth_utility_mean, loss_truth_utility_se, loss_truth_stock_mean, loss_truth_stock_se, loss_truth_clearing_mean, loss_truth_clearing_se) = compute_trajectory(gen_hidden_lst, gen_lr, gen_decay, gen_scheduler_step, gen_solver, dis_hidden_lst, dis_lr, dis_decay, dis_scheduler_step, dis_solver, dis_loss, combo_hidden_lst, combo_lr, combo_decay, combo_scheduler_step, combo_solver, use_true_mu = False, use_fast_var = use_fast_var, seed = seed, clearing_known = clearing_known, utility_power = utility_power, drive_dir = drive_dir + "_mu_unknown")
     s0_nomu = torch.mean(stock_st_nomu[:,0])
+    mu0_nomu = torch.mean(mu_st_nomu[:,0])
+    sigma0_nomu = torch.mean(sigma_st_nomu[:,0])
+    if stock_st_combo_nomu is not None:
+        s0_nomu_combo = torch.mean(stock_st_combo_nomu[:,0])
+        mu0_nomu_combo = torch.mean(mu_st_combo_nomu[:,0])
+        sigma0_nomu_combo = torch.mean(sigma_st_combo_nomu[:,0])
+    else:
+        s0_nomu_combo = None
+    if stock_st_fbsde_nomu is not None:
+        s0_nomu_fbsde = torch.mean(stock_st_fbsde_nomu[:,0])
+    else:
+        s0_nomu_fbsde = None
+    mu0_nomu_fbsde = torch.mean(mu_st_fbsde_nomu[:,0])
+    sigma0_nomu_fbsde = torch.mean(sigma_st_fbsde_nomu[:,0])
+    mu0_nomu_fbsde = torch.mean(mu_st_fbsde_nomu[:,0])
+    sigma0_nomu_fbsde = torch.mean(sigma_st_fbsde_nomu[:,0])
     s0_truth = torch.mean(stock_st_truth[:,0])
+    mu0_truth = torch.mean(mu_st_truth[:,0])
+    sigma0_truth = torch.mean(sigma_st_truth[:,0])
     if utility_power == 2 or N_AGENT == 2:
-        phi_dot_stn, phi_stn, mu_st, sigma_st, stock_st, loss_utility_mean, loss_utility_se, loss_stock_mean, loss_stock_se, loss_clearing_mean, loss_clearing_se, phi_dot_stn_truth, phi_stn_truth, mu_st_truth, sigma_st_truth, stock_st_truth, loss_truth_utility_mean, loss_truth_utility_se, loss_truth_stock_mean, loss_truth_stock_se, loss_truth_clearing_mean, loss_truth_clearing_se = compute_trajectory(gen_hidden_lst, gen_lr, gen_decay, gen_scheduler_step, gen_solver, dis_hidden_lst, dis_lr, dis_decay, dis_scheduler_step, dis_solver, dis_loss, use_true_mu = True, use_fast_var = use_fast_var, seed = seed, clearing_known = clearing_known, utility_power = utility_power, drive_dir = drive_dir)
+        (phi_dot_stn, phi_stn, mu_st, sigma_st, stock_st, loss_utility_mean, loss_utility_se, loss_stock_mean, loss_stock_se, loss_clearing_mean, loss_clearing_se,
+        phi_dot_stn_combo, phi_stn_combo, mu_st_combo, sigma_st_combo, stock_st_combo, loss_combo_utility_mean, loss_combo_utility_se, loss_combo_stock_mean, loss_combo_stock_se, loss_combo_clearing_mean, loss_combo_clearing_se,
+        phi_dot_stn_fbsde, phi_stn_fbsde, mu_st_fbsde, sigma_st_fbsde, stock_st_fbsde, loss_fbsde_utility_mean, loss_fbsde_utility_se, loss_fbsde_stock_mean, loss_fbsde_stock_se, loss_fbsde_clearing_mean, loss_fbsde_clearing_se,
+        phi_dot_stn_truth, phi_stn_truth, mu_st_truth, sigma_st_truth, stock_st_truth, loss_truth_utility_mean, loss_truth_utility_se, loss_truth_stock_mean, loss_truth_stock_se, loss_truth_clearing_mean, loss_truth_clearing_se) = compute_trajectory(gen_hidden_lst, gen_lr, gen_decay, gen_scheduler_step, gen_solver, dis_hidden_lst, dis_lr, dis_decay, dis_scheduler_step, dis_solver, dis_loss, combo_hidden_lst, combo_lr, combo_decay, combo_scheduler_step, combo_solver, use_true_mu = True, use_fast_var = use_fast_var, seed = seed, clearing_known = clearing_known, utility_power = utility_power, drive_dir = drive_dir)
+        if stock_st_combo is not None:
+            s0_combo = torch.mean(stock_st_combo[:,0])
+            mu0_combo = torch.mean(mu_st_combo[:,0])
+            sigma0_combo = torch.mean(sigma_st_combo[:,0])
+        else:
+            s0_combo = None
+        if stock_st_fbsde is not None:
+            s0_fbsde = torch.mean(stock_st_fbsde[:,0])
+            mu0_fbsde = torch.mean(mu_st_fbsde[:,0])
+            sigma0_fbsde = torch.mean(sigma_st_fbsde[:,0])
+        else:
+            s0_fbsde = None
+            
         s0 = torch.mean(stock_st[:,0])
+        mu0 = torch.mean(mu_st[:,0])
+        sigma0 = torch.mean(sigma_st[:,0])
 
     visualize_obs = 0
     if utility_power == 2:
@@ -1053,25 +1258,159 @@ def plot_all_trajectories(gen_hidden_lst, gen_lr, gen_decay, gen_scheduler_step,
             benchmark_name = "Frictionless"
     if utility_power == 1.5 and N_AGENT > 2:
         dct = {
-            "Neg Utility Mean": [float(loss_utility_mean_nomu.detach()), float(loss_truth_utility_mean.detach())],
-            "Stock Loss Mean": [float(loss_stock_mean_nomu.detach()), float(loss_truth_stock_mean.detach())],
-            "Clearing Loss Mean": [float(loss_clearing_mean_nomu.detach()), float(loss_truth_clearing_mean.detach())],
-            "Neg Utility SE": [float(loss_utility_se_nomu.detach()), float(loss_truth_utility_se.detach())],
-            "Stock Loss SE": [float(loss_stock_se_nomu.detach()), float(loss_truth_stock_se.detach())],
-            "Clearing Loss SE": [float(loss_clearing_se_nomu.detach()), float(loss_truth_clearing_se.detach())],
-            "S0": [float(s0_nomu.detach()), float(s0_truth.detach())],
-            "Type": ["Mu Unknown", benchmark_name]
+            "Utility Mean": [
+                -safe_detach(loss_utility_mean_nomu),
+                -safe_detach(loss_combo_utility_mean_nomu),
+                -safe_detach(loss_fbsde_utility_mean_nomu),
+                -safe_detach(loss_truth_utility_mean)
+            ],
+            "Stock Loss Mean": [
+                safe_detach(loss_stock_mean_nomu),
+                safe_detach(loss_combo_stock_mean_nomu),
+                safe_detach(loss_fbsde_stock_mean_nomu),
+                safe_detach(loss_truth_stock_mean)
+            ],
+            "Clearing Loss Mean": [
+                safe_detach(loss_clearing_mean_nomu),
+                safe_detach(loss_combo_clearing_mean_nomu),
+                safe_detach(loss_fbsde_clearing_mean_nomu),
+                safe_detach(loss_truth_clearing_mean)
+            ],
+            "Utility SE": [
+                safe_detach(loss_utility_se_nomu),
+                safe_detach(loss_combo_utility_se_nomu),
+                safe_detach(loss_fbsde_utility_se_nomu),
+                safe_detach(loss_truth_utility_se)
+            ],
+            "Stock Loss SE": [
+                safe_detach(loss_stock_se_nomu),
+                safe_detach(loss_combo_stock_se_nomu),
+                safe_detach(loss_fbsde_stock_se_nomu),
+                safe_detach(loss_truth_stock_se)
+            ],
+            "Clearing Loss SE": [
+                safe_detach(loss_clearing_se_nomu),
+                safe_detach(loss_combo_clearing_se_nomu),
+                safe_detach(loss_fbsde_clearing_se_nomu),
+                safe_detach(loss_truth_clearing_se)
+            ],
+            "S0": [
+                safe_detach(s0_nomu),
+                safe_detach(s0_nomu_combo),
+                safe_detach(s0_nomu_fbsde),
+                safe_detach(s0_truth)
+            ],
+            "Mu0": [
+                safe_detach(mu0_nomu),
+                safe_detach(mu0_nomu_combo),
+                safe_detach(mu0_nomu_fbsde),
+                safe_detach(mu0_truth)
+            ],
+            "Sigma0": [
+                safe_detach(sigma0_nomu),
+                safe_detach(sigma0_nomu_combo),
+                safe_detach(sigma0_nomu_fbsde),
+                safe_detach(sigma0_truth)
+            ],
+            "Type": [
+                "GAN (Mu Unknown)",
+                "Combo (Mu Unknown)",
+                "FBSDE (Mu Unknown)",
+                benchmark_name
+            ]
         }
     else:
         dct = {
-            "Neg Utility Mean": [float(loss_utility_mean_nomu.detach()), float(loss_utility_mean.detach()), float(loss_truth_utility_mean.detach())],
-            "Stock Loss Mean": [float(loss_stock_mean_nomu.detach()), float(loss_stock_mean.detach()), float(loss_truth_stock_mean.detach())],
-            "Clearing Loss Mean": [float(loss_clearing_mean_nomu.detach()), float(loss_clearing_mean.detach()), float(loss_truth_clearing_mean.detach())],
-            "Neg Utility SE": [float(loss_utility_se_nomu.detach()), float(loss_utility_se.detach()), float(loss_truth_utility_se.detach())],
-            "Stock Loss SE": [float(loss_stock_se_nomu.detach()), float(loss_stock_se.detach()), float(loss_truth_stock_se.detach())],
-            "Clearing Loss SE": [float(loss_clearing_se_nomu.detach()), float(loss_clearing_se.detach()), float(loss_truth_clearing_se.detach())],
-            "S0": [float(s0_nomu.detach()), float(s0.detach()), float(s0_truth.detach())],
-            "Type": ["Mu Unknown", "Mu Known", benchmark_name]
+            "Utility Mean": [
+                -safe_detach(loss_utility_mean_nomu),
+                -safe_detach(loss_combo_utility_mean_nomu),
+                -safe_detach(loss_fbsde_utility_mean_nomu),
+                -safe_detach(loss_utility_mean),
+                -safe_detach(loss_combo_utility_mean),
+                -safe_detach(loss_fbsde_utility_mean),
+                -safe_detach(loss_truth_utility_mean)
+            ],
+            "Stock Loss Mean": [
+                safe_detach(loss_stock_mean_nomu),
+                safe_detach(loss_combo_stock_mean_nomu),
+                safe_detach(loss_fbsde_stock_mean_nomu),
+                safe_detach(loss_stock_mean),
+                safe_detach(loss_combo_stock_mean),
+                safe_detach(loss_fbsde_stock_mean),
+                safe_detach(loss_truth_stock_mean)
+            ],
+            "Clearing Loss Mean": [
+                safe_detach(loss_clearing_mean_nomu),
+                safe_detach(loss_combo_clearing_mean_nomu),
+                safe_detach(loss_fbsde_clearing_mean_nomu),
+                safe_detach(loss_clearing_mean),
+                safe_detach(loss_combo_clearing_mean),
+                safe_detach(loss_fbsde_clearing_mean),
+                safe_detach(loss_truth_clearing_mean)
+            ],
+            "Utility SE": [
+                safe_detach(loss_utility_se_nomu),
+                safe_detach(loss_combo_utility_se_nomu),
+                safe_detach(loss_fbsde_utility_se_nomu),
+                safe_detach(loss_utility_se),
+                safe_detach(loss_combo_utility_se),
+                safe_detach(loss_fbsde_utility_se),
+                safe_detach(loss_truth_utility_se)
+            ],
+            "Stock Loss SE": [
+                safe_detach(loss_stock_se_nomu),
+                safe_detach(loss_combo_stock_se_nomu),
+                safe_detach(loss_fbsde_stock_se_nomu),
+                safe_detach(loss_stock_se),
+                safe_detach(loss_combo_stock_se),
+                safe_detach(loss_fbsde_stock_se),
+                safe_detach(loss_truth_stock_se)
+            ],
+            "Clearing Loss SE": [
+                safe_detach(loss_clearing_se_nomu),
+                safe_detach(loss_combo_clearing_se_nomu),
+                safe_detach(loss_fbsde_clearing_se_nomu),
+                safe_detach(loss_clearing_se),
+                safe_detach(loss_combo_clearing_se),
+                safe_detach(loss_fbsde_clearing_se),
+                safe_detach(loss_truth_clearing_se)
+            ],
+            "S0": [
+                safe_detach(s0_nomu),
+                safe_detach(s0_nomu_combo),
+                safe_detach(s0_nomu_fbsde),
+                safe_detach(s0),
+                safe_detach(s0_combo),
+                safe_detach(s0_fbsde),
+                safe_detach(s0_truth)
+            ],
+            "Mu0": [
+                safe_detach(mu0_nomu),
+                safe_detach(mu0_nomu_combo),
+                safe_detach(mu0_nomu_fbsde),
+                safe_detach(mu0),
+                safe_detach(mu0_combo),
+                safe_detach(mu0_fbsde),
+                safe_detach(mu0_truth)
+            ],
+            "Sigma0": [
+                safe_detach(sigma0_nomu),
+                safe_detach(sigma0_nomu_combo),
+                safe_detach(sigma0_nomu_fbsde),
+                safe_detach(sigma0),
+                safe_detach(sigma0_combo),
+                safe_detach(sigma0_fbsde),
+                safe_detach(sigma0_truth)
+            ],
+            "Type": [
+                "GAN (Mu Unknown)",
+                "Combo (Mu Unknown)",
+                "FBSDE (Mu Unknown)",
+                "GAN (Mu Known)",
+                "Combo (Mu Known)",
+                "FBSDE (Mu Known)",
+                benchmark_name
+            ]
         }
     df = pd.DataFrame.from_dict(dct)
     df.to_csv(f"Tables/{drive_dir}.csv", index = False)
@@ -1081,21 +1420,50 @@ def plot_all_trajectories(gen_hidden_lst, gen_lr, gen_decay, gen_scheduler_step,
     elif utility_power == 2:
         AGENT_LST = [1, 3] #[0, 3]
     else:
-        AGENT_LST = list(range(N_AGENT))
+        AGENT_LST = [1, 3] #list(range(N_AGENT))
+        
+    # === Visualization ===
     if utility_power == 1.5 and N_AGENT > 2:
-        visualize_comparison(TIMESTAMPS, [mu_st_nomu[visualize_obs,:]], 0, drive_dir, "mu", ["$\mu$ Unknown"], comment = "")
-        visualize_comparison(TIMESTAMPS, [sigma_st_nomu[visualize_obs,:]], 0, drive_dir, "sigma", ["$\mu$ Unknown"], comment = "")
-        visualize_comparison(TIMESTAMPS, [phi_dot_stn_nomu[visualize_obs,:,agent] for agent in AGENT_LST], 0, drive_dir, "phi_dot", [f"Agent {agent + 1}" for agent in AGENT_LST], comment = "", expand = False)
-        visualize_comparison(TIMESTAMPS, [phi_stn_nomu[visualize_obs,:-1,agent] for agent in AGENT_LST], 0, drive_dir, "phi", [f"Agent {agent + 1}" for agent in AGENT_LST], comment = "", expand = False)
+        model_entries = [
+            ("Reinforced-GAN (Mu Unknown)", mu_st_nomu, sigma_st_nomu, phi_dot_stn_nomu, phi_stn_nomu),
+            ("Combo (Mu Unknown)", mu_st_combo_nomu, sigma_st_combo_nomu, phi_dot_stn_combo_nomu, phi_stn_combo_nomu),
+#            ("FBSDE (Mu Unknown)", mu_st_fbsde_nomu, sigma_st_fbsde_nomu, phi_dot_stn_fbsde_nomu, phi_stn_fbsde_nomu),
+#            (benchmark_name, mu_st_truth, sigma_st_truth, phi_dot_stn_truth, phi_stn_truth)
+        ]
     else:
-        visualize_comparison(TIMESTAMPS, [mu_st_nomu[visualize_obs,:], mu_st[visualize_obs,:], mu_st_truth[visualize_obs,:]], 0, drive_dir, "mu", ["$\mu$ Unknown", "$\mu$ Known", benchmark_name], comment = "")
-        visualize_comparison(TIMESTAMPS, [sigma_st_nomu[visualize_obs,:], sigma_st[visualize_obs,:], sigma_st_truth[visualize_obs,:]], 0, drive_dir, "sigma", ["$\mu$ Unknown", "$\mu$ Known", benchmark_name], comment = "")
-        # if utility_power == 1.5:
-        visualize_comparison(TIMESTAMPS, [phi_dot_stn_nomu[visualize_obs,:,agent] for agent in AGENT_LST] + [phi_dot_stn[visualize_obs,:,agent] for agent in AGENT_LST] + [phi_dot_stn_truth[visualize_obs,:,agent] for agent in AGENT_LST], 0, drive_dir, "phi_dot", [f"$\mu$ Unknown\n - Agent {agent + 1}" for agent in AGENT_LST] + [f"$\mu$ Known\n - Agent {agent + 1}" for agent in AGENT_LST] + [f"{benchmark_name}\n - Agent {agent + 1}" for agent in AGENT_LST], comment = "", expand = False)
-        visualize_comparison(TIMESTAMPS, [phi_stn_nomu[visualize_obs,:-1,agent] for agent in AGENT_LST] + [phi_stn[visualize_obs,:-1,agent] for agent in AGENT_LST] + [phi_stn_truth[visualize_obs,:-1,agent] for agent in AGENT_LST], 0, drive_dir, "phi", [f"$\mu$ Unknown\n - Agent {agent + 1}" for agent in AGENT_LST] + [f"$\mu$ Known\n - Agent {agent + 1}" for agent in AGENT_LST] + [f"{benchmark_name}\n - Agent {agent + 1}" for agent in AGENT_LST], comment = "", expand = False)
-        # else:
-        visualize_comparison(TIMESTAMPS, [phi_dot_stn_nomu[visualize_obs,:], phi_dot_stn[visualize_obs,:], phi_dot_stn_truth[visualize_obs,:]], 0, drive_dir, "phi_dot", ["$\mu$ Unknown", "$\mu$ Known", benchmark_name], comment = "", expand = True)
-        visualize_comparison(TIMESTAMPS, [phi_stn_nomu[visualize_obs,:-1], phi_stn[visualize_obs,:-1], phi_stn_truth[visualize_obs,:-1]], 0, drive_dir, "phi", ["$\mu$ Unknown", "$\mu$ Known", benchmark_name], comment = "", expand = True)
+        model_entries = [
+            ("Reinforced-GAN (Mu Unknown)", mu_st_nomu, sigma_st_nomu, phi_dot_stn_nomu, phi_stn_nomu),
+            ("Combo (Mu Unknown)", mu_st_combo_nomu, sigma_st_combo_nomu, phi_dot_stn_combo_nomu, phi_stn_combo_nomu),
+#            ("FBSDE (Mu Unknown)", mu_st_fbsde_nomu, sigma_st_fbsde_nomu, phi_dot_stn_fbsde_nomu, phi_stn_fbsde_nomu),
+            ("Reinforced-GAN (Mu Known)", mu_st, sigma_st, phi_dot_stn, phi_stn),
+#            ("Combo (Mu Known)", mu_st_combo, sigma_st_combo, phi_dot_stn_combo, phi_stn_combo),
+#            ("FBSDE (Mu Known)", mu_st_fbsde, sigma_st_fbsde, phi_dot_stn_fbsde, phi_stn_fbsde),
+            (benchmark_name, mu_st_truth, sigma_st_truth, phi_dot_stn_truth, phi_stn_truth)
+        ]
+
+    # Filter out missing models
+    model_entries = [m for m in model_entries if m[-1] is not None]
+
+    # Extract data for visualization
+    type_labels = [m[0] for m in model_entries]
+    mu_list = [m[1][visualize_obs, :] for m in model_entries]
+    sigma_list = [m[2][visualize_obs, :] for m in model_entries]
+    phi_dot_list = [[m[3][visualize_obs, :, agent] for agent in AGENT_LST] for m in model_entries]
+    phi_list = [[m[4][visualize_obs, :-1, agent] for agent in AGENT_LST] for m in model_entries]
+
+    # === Visualization Calls ===
+    visualize_comparison(TIMESTAMPS, mu_list, 0, drive_dir, "mu", type_labels, comment="")
+    visualize_comparison(TIMESTAMPS, sigma_list, 0, drive_dir, "sigma", type_labels, comment="")
+
+    # Flatten nested agent-level lists
+    phi_dot_flat = [series for sublist in phi_dot_list for series in sublist]
+    phi_flat = [series for sublist in phi_list for series in sublist]
+
+    phi_dot_labels = [f"{label}\n - Agent {agent + 1}" for label in type_labels for agent in AGENT_LST]
+    phi_labels = [f"{label}\n - Agent {agent + 1}" for label in type_labels for agent in AGENT_LST]
+
+    visualize_comparison(TIMESTAMPS, phi_dot_flat, 0, drive_dir, "phi_dot", phi_dot_labels, comment="", expand=False)
+    visualize_comparison(TIMESTAMPS, phi_flat, 0, drive_dir, "phi", phi_labels, comment="", expand=False)
 
 ## Begin Training
 train_args = {
@@ -1113,9 +1481,9 @@ train_args = {
     "dis_decay": 0.1,
     "dis_scheduler_step": 20000,
     "combo_lr": [1e-3],
-    "combo_epoch": [100000],#[500, 1000, 10000, 50000],
+    "combo_epoch": [10000],#[500, 1000, 10000, 50000],
     "combo_decay": 0.1,
-    "combo_scheduler_step": 50000,
+    "combo_scheduler_step": 5000,
     "gen_sample": [1000],#[3000, 1000],
     "dis_sample": [1000],#[3000, 1000],
     "combo_sample": [128, 128],
@@ -1123,7 +1491,7 @@ train_args = {
     "gen_solver": ["Adam"],
     "dis_solver": ["Adam"],
     "combo_solver": ["Adam"],
-    "total_rounds": 10,#10,
+    "total_rounds": 1,#10,
     "normalize_up_to": 100,
     "visualize_obs": 0,
     "train_gen": True,
@@ -1131,14 +1499,15 @@ train_args = {
     "use_pretrained_gen": True,
     "use_pretrained_dis": True,
     "use_pretrained_combo": True,
-    "use_true_mu": False,
+    "use_true_mu": True,
     "use_fast_var": True,
     "last_round_dis": True,
     "seed": 0,
     "ckpt_freq": 10000,
-    "use_combo": False,
+    "use_combo": True,
+    "use_fbsde": True,
     "clearing_known": False
 }
-# generator, discriminator = training_pipeline(train_args = train_args, **train_args)
+#generator, discriminator = training_pipeline(train_args = train_args, **train_args)
 # inference(generator, discriminator, randomized = False, clearing_known = train_args["clearing_known"])
 plot_all_trajectories(**train_args)

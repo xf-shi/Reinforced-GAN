@@ -51,10 +51,13 @@ def csv_to_latex_table(csv_file, output_file=None, table_name = "10agents_power2
             if isinstance(value, (int, float)):
                 # Convert numbers to scientific notation in LaTeX format
                 formatted_value = f"{value:.2e}"
-                base, exponent = formatted_value.split("e")
-                base = float(base)
-                exponent = int(exponent)
-                latex_value = f"${base:.2f} \\times 10^{{{exponent}}}$"
+                try:
+                    base, exponent = formatted_value.split("e")
+                    base = float(base)
+                    exponent = int(exponent)
+                    latex_value = f"${base:.2f} \\times 10^{{{exponent}}}$"
+                except:
+                    latex_value = "NaN"
                 row_data.append(latex_value)
             else:
                 # Keep non-numerical values as is
@@ -115,10 +118,13 @@ def csv_to_latex_table(csv_file, output_file=None, table_name = "10agents_power2
             if isinstance(value, (int, float)):
                 # Convert numbers to scientific notation in LaTeX format
                 formatted_value = f"{value:.2e}"
-                base, exponent = formatted_value.split("e")
-                base = float(base)
-                exponent = int(exponent)
-                latex_value = f"${base:.2f} \\times 10^{{{exponent}}}$"
+                try:
+                    base, exponent = formatted_value.split("e")
+                    base = float(base)
+                    exponent = int(exponent)
+                    latex_value = f"${base:.2f} \\times 10^{{{exponent}}}$"
+                except:
+                    latex_value = "NaN"
                 row_data.append(latex_value)
             else:
                 # Keep non-numerical values as is
@@ -156,21 +162,22 @@ def csv_to_latex_table(csv_file, output_file=None, table_name = "10agents_power2
     ## Table 3
     # Read the CSV file into a DataFrame
     df = pd.read_csv(csv_file)
-    df = df[["Type", "Neg Utility Mean", "Clearing Loss Mean", "Stock Loss Mean", "S0"]]
-    df["Type"] = pd.Categorical(df["Type"], ["Ground Truth", "Leading Order", "Frictionless", "Mu Known", "Mu Unknown"])
+    df = df[["Type", "Utility Mean", "Clearing Loss Mean", "Stock Loss Mean", "S0", "Mu0", "Sigma0"]]
+    df["Type"] = pd.Categorical(df["Type"], ["Ground Truth", "Leading Order", "Frictionless", "GAN (Mu Known)", "GAN (Mu Unknown)", "Combo (Mu Known)", "Combo (Mu Unknown)", "FBSDE (Mu Known)", "FBSDE (Mu Unknown)"])
     df = df.sort_values("Type")
     
     # Start building the LaTeX table
     latex_code = []
     latex_code.append(r"\begin{table}[ht]")
     latex_code.append(r"    \centering")
-    latex_code.append(r"    \begin{tabular}{|c|c|c|c|c|}")
+    latex_code.append(r"     \resizebox{\textwidth}{!}{%")
+    latex_code.append(r"    \begin{tabular}{|c|c|c|c|c|c|c|}")
     latex_code.append(r"        \hline")
     
     # Add the table header
 #    header = " & ".join(df.columns) + r" \\"
 #    latex_code.append(f"        {header}")
-    header_top = r"& $\sum_{n\in\mfN} J_n(\dot\varphi_n)$ & $\|\sum_{n\in\mfN}\dot\varphi_n\|^2$ & $\|S_T^\theta - \mfS \|^2$&$S_0$ \\"
+    header_top = r"& $\sum_{n\in\mfN} J_n(\dot\varphi_n)$ & $\|\sum_{n\in\mfN}\dot\varphi_n\|^2$ & $\|S_T^\theta - \mfS \|^2$ & $S_0$ & $\mu_0$ & $\sigma_0$ \\"
     latex_code.append(f"        {header_top}")
     latex_code.append(r"        \hline")
     
@@ -183,12 +190,13 @@ def csv_to_latex_table(csv_file, output_file=None, table_name = "10agents_power2
                 formatted_value = f"{value:.2e}"
                 try:
                     base, exponent = formatted_value.split("e")
+                    base = float(base)
+                    exponent = int(exponent)
+                    latex_value = f"${base:.2f} \\times 10^{{{exponent}}}$"
                 except:
-                    print(value, formatted_value, row)
-                    assert False
-                base = float(base)
-                exponent = int(exponent)
-                latex_value = f"${base:.2f} \\times 10^{{{exponent}}}$"
+                    latex_value = "NaN"
+#                    print(value, formatted_value, row)
+#                    assert False
                 row_data.append(latex_value)
             else:
                 # Keep non-numerical values as is
@@ -207,6 +215,7 @@ def csv_to_latex_table(csv_file, output_file=None, table_name = "10agents_power2
     n_agents = int(table_name.split("_")[0].strip("agents"))
     caption = f"Comparison of Reinforced-GANs Against Ground Truth: {n_agents} Agents with {caption_type} Costs, simulation is done with 3000 sample paths."
     label += str(n_agents)
+    latex_code.append(r"    }")
     latex_code.append(f"    \caption{{{caption}}}")
     latex_code.append(f"    \label{{tab:{label}}}")
     latex_code.append(r"\end{table}")

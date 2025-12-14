@@ -1,0 +1,59 @@
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|c|c|c|c|c|c|c|c|c|}
+        \hline
+        \multicolumn{2}{c|}{Utility} & \multicolumn{2}{c|}{Clearing Loss} & \multicolumn{2}{c|}{Stock Loss} & \multicolumn{2}{c|}{Mu0} & Type \\
+        Mean & S.E & Mean & S.E & Mean & S.E &   &   &   \\
+        \hline
+        $-9.46 \times 10^{-2}$ & $5.04 \times 10^{-6}$ & $9.32 \times 10^{-5}$ & $1.02 \times 10^{-3}$ & $2.38 \times 10^{-7}$ & $1.18 \times 10^{-6}$ & $1.64 \times 10^{-1}$ & $1.10 \times 10^{0}$ & GAN (Mu Unknown) \\
+        \hline
+        $-3.76 \times 10^{-1}$ & $3.25 \times 10^{-7}$ & $8.63 \times 10^{1}$ & $8.10 \times 10^{-3}$ & $4.36 \times 10^{-8}$ & $5.06 \times 10^{-1}$ & $2.42 \times 10^{-1}$ & $1.32 \times 10^{0}$ & Combo (Mu Unknown) \\
+        \hline
+        $-1.95 \times 10^{2}$ & $3.02 \times 10^{-1}$ & $7.54 \times 10^{8}$ & $2.26 \times 10^{1}$ & $6.78 \times 10^{-3}$ & $1.54 \times 10^{8}$ & $-1.40 \times 10^{-2}$ & $8.13 \times 10^{-2}$ & FBSDE (Mu Unknown) \\
+        \hline
+        $-4.80 \times 10^{-1}$ & $2.91 \times 10^{-2}$ & $2.30 \times 10^{-9}$ & $9.52 \times 10^{-4}$ & $2.39 \times 10^{-9}$ & $4.22 \times 10^{-11}$ & $1.39 \times 10^{-1}$ & $1.00 \times 10^{0}$ & Frictionless \\
+        \hline
+    \end{tabular}
+    \caption{Power 1.5 Cost 10 Agents}
+    \label{tab:power-10}
+\end{table}
+
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|c|c|}
+        \hline
+        S0 & Type \\
+        \hline
+        $3.65 \times 10^{-1}$ & GAN (Mu Unknown) \\
+        \hline
+        $3.61 \times 10^{-1}$ & Combo (Mu Unknown) \\
+        \hline
+        $0.00 \times 10^{0}$ & FBSDE (Mu Unknown) \\
+        \hline
+        $2.02 \times 10^{-1}$ & Frictionless \\
+        \hline
+    \end{tabular}
+    \caption{Power 1.5 Cost 10 Agents $S_0$}
+    \label{tab:power-s0-10}
+\end{table}
+
+\begin{table}[ht]
+    \centering
+     \resizebox{\textwidth}{!}{%
+    \begin{tabular}{|c|c|c|c|c|c|c|}
+        \hline
+        & $\sum_{n\in\mfN} J_n(\dot\varphi_n)$ & $\|\sum_{n\in\mfN}\dot\varphi_n\|^2$ & $\|S_T^\theta - \mfS \|^2$ & $S_0$ & $\mu_0$ & $\sigma_0$ \\
+        \hline
+        Frictionless & $-4.80 \times 10^{-1}$ & $2.30 \times 10^{-9}$ & $2.91 \times 10^{-2}$ & $2.02 \times 10^{-1}$ & $1.39 \times 10^{-1}$ & $1.00 \times 10^{0}$ \\
+        \hline
+        GAN (Mu Unknown) & $-9.46 \times 10^{-2}$ & $9.32 \times 10^{-5}$ & $5.04 \times 10^{-6}$ & $3.65 \times 10^{-1}$ & $1.64 \times 10^{-1}$ & $1.10 \times 10^{0}$ \\
+        \hline
+        Combo (Mu Unknown) & $-3.76 \times 10^{-1}$ & $8.63 \times 10^{1}$ & $3.25 \times 10^{-7}$ & $3.61 \times 10^{-1}$ & $2.42 \times 10^{-1}$ & $1.32 \times 10^{0}$ \\
+        \hline
+        FBSDE (Mu Unknown) & $-1.95 \times 10^{2}$ & $7.54 \times 10^{8}$ & $3.02 \times 10^{-1}$ & $0.00 \times 10^{0}$ & $-1.40 \times 10^{-2}$ & $8.13 \times 10^{-2}$ \\
+        \hline
+    \end{tabular}
+    }
+    \caption{Comparison of Reinforced-GANs Against Ground Truth: 10 Agents with 3/2-Power Costs, simulation is done with 3000 sample paths.}
+    \label{tab:power-10}
+\end{table}

@@ -1,0 +1,77 @@
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|c|c|c|c|c|c|c|c|c|}
+        \hline
+        \multicolumn{2}{c|}{Utility} & \multicolumn{2}{c|}{Clearing Loss} & \multicolumn{2}{c|}{Stock Loss} & \multicolumn{2}{c|}{Mu0} & Type \\
+        Mean & S.E & Mean & S.E & Mean & S.E &   &   &   \\
+        \hline
+        $-2.09 \times 10^{-1}$ & $2.73 \times 10^{-7}$ & $2.30 \times 10^{-5}$ & $3.29 \times 10^{-3}$ & $6.11 \times 10^{-8}$ & $4.83 \times 10^{-7}$ & $1.36 \times 10^{-1}$ & $1.26 \times 10^{0}$ & GAN (Mu Unknown) \\
+        \hline
+        $-2.07 \times 10^{-1}$ & $6.05 \times 10^{-6}$ & $1.91 \times 10^{-2}$ & $3.32 \times 10^{-3}$ & $1.68 \times 10^{-7}$ & $2.77 \times 10^{-4}$ & $5.54 \times 10^{0}$ & $1.29 \times 10^{0}$ & Combo (Mu Unknown) \\
+        \hline
+        $-3.84 \times 10^{-1}$ & $1.39 \times 10^{-1}$ & $2.56 \times 10^{-3}$ & $8.27 \times 10^{-3}$ & $3.10 \times 10^{-3}$ & $2.35 \times 10^{-5}$ & $1.61 \times 10^{0}$ & $1.27 \times 10^{0}$ & FBSDE (Mu Unknown) \\
+        \hline
+        $-2.09 \times 10^{-1}$ & $2.32 \times 10^{-5}$ & $2.21 \times 10^{-3}$ & $3.28 \times 10^{-3}$ & $1.01 \times 10^{-6}$ & $3.25 \times 10^{-5}$ & $2.23 \times 10^{-1}$ & $1.26 \times 10^{0}$ & GAN (Mu Known) \\
+        \hline
+        $-4.86 \times 10^{-2}$ & $2.61 \times 10^{0}$ & $7.43 \times 10^{-1}$ & $4.26 \times 10^{-4}$ & $6.96 \times 10^{-2}$ & $1.23 \times 10^{-2}$ & $6.17 \times 10^{-1}$ & $2.11 \times 10^{0}$ & Combo (Mu Known) \\
+        \hline
+        $-3.83 \times 10^{-1}$ & $2.19 \times 10^{-1}$ & $2.41 \times 10^{-4}$ & $8.25 \times 10^{-3}$ & $4.69 \times 10^{-3}$ & $5.38 \times 10^{-6}$ & $2.26 \times 10^{-1}$ & $1.28 \times 10^{0}$ & FBSDE (Mu Known) \\
+        \hline
+        $-2.08 \times 10^{-1}$ & $2.95 \times 10^{-17}$ & $2.11 \times 10^{-13}$ & $3.14 \times 10^{-3}$ & $2.39 \times 10^{-18}$ & $3.39 \times 10^{-15}$ & $2.16 \times 10^{-1}$ & $1.25 \times 10^{0}$ & Ground Truth \\
+        \hline
+    \end{tabular}
+    \caption{Quadratic Cost 10 Agents}
+    \label{tab:quad-10}
+\end{table}
+
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|c|c|}
+        \hline
+        S0 & Type \\
+        \hline
+        $3.61 \times 10^{-1}$ & GAN (Mu Unknown) \\
+        \hline
+        $3.44 \times 10^{-1}$ & Combo (Mu Unknown) \\
+        \hline
+        $0.00 \times 10^{0}$ & FBSDE (Mu Unknown) \\
+        \hline
+        $3.58 \times 10^{-1}$ & GAN (Mu Known) \\
+        \hline
+        $-1.10 \times 10^{0}$ & Combo (Mu Known) \\
+        \hline
+        $0.00 \times 10^{0}$ & FBSDE (Mu Known) \\
+        \hline
+        $3.61 \times 10^{-1}$ & Ground Truth \\
+        \hline
+    \end{tabular}
+    \caption{Quadratic Cost 10 Agents $S_0$}
+    \label{tab:quad-s0-10}
+\end{table}
+
+\begin{table}[ht]
+    \centering
+     \resizebox{\textwidth}{!}{%
+    \begin{tabular}{|c|c|c|c|c|c|c|}
+        \hline
+        & $\sum_{n\in\mfN} J_n(\dot\varphi_n)$ & $\|\sum_{n\in\mfN}\dot\varphi_n\|^2$ & $\|S_T^\theta - \mfS \|^2$ & $S_0$ & $\mu_0$ & $\sigma_0$ \\
+        \hline
+        Ground Truth & $-2.08 \times 10^{-1}$ & $2.11 \times 10^{-13}$ & $2.95 \times 10^{-17}$ & $3.61 \times 10^{-1}$ & $2.16 \times 10^{-1}$ & $1.25 \times 10^{0}$ \\
+        \hline
+        GAN (Mu Known) & $-2.09 \times 10^{-1}$ & $2.21 \times 10^{-3}$ & $2.32 \times 10^{-5}$ & $3.58 \times 10^{-1}$ & $2.23 \times 10^{-1}$ & $1.26 \times 10^{0}$ \\
+        \hline
+        GAN (Mu Unknown) & $-2.09 \times 10^{-1}$ & $2.30 \times 10^{-5}$ & $2.73 \times 10^{-7}$ & $3.61 \times 10^{-1}$ & $1.36 \times 10^{-1}$ & $1.26 \times 10^{0}$ \\
+        \hline
+        Combo (Mu Known) & $-4.86 \times 10^{-2}$ & $7.43 \times 10^{-1}$ & $2.61 \times 10^{0}$ & $-1.10 \times 10^{0}$ & $6.17 \times 10^{-1}$ & $2.11 \times 10^{0}$ \\
+        \hline
+        Combo (Mu Unknown) & $-2.07 \times 10^{-1}$ & $1.91 \times 10^{-2}$ & $6.05 \times 10^{-6}$ & $3.44 \times 10^{-1}$ & $5.54 \times 10^{0}$ & $1.29 \times 10^{0}$ \\
+        \hline
+        FBSDE (Mu Known) & $-3.83 \times 10^{-1}$ & $2.41 \times 10^{-4}$ & $2.19 \times 10^{-1}$ & $0.00 \times 10^{0}$ & $2.26 \times 10^{-1}$ & $1.28 \times 10^{0}$ \\
+        \hline
+        FBSDE (Mu Unknown) & $-3.84 \times 10^{-1}$ & $2.56 \times 10^{-3}$ & $1.39 \times 10^{-1}$ & $0.00 \times 10^{0}$ & $1.61 \times 10^{0}$ & $1.27 \times 10^{0}$ \\
+        \hline
+    \end{tabular}
+    }
+    \caption{Comparison of Reinforced-GANs Against Ground Truth: 10 Agents with Quadratic Costs, simulation is done with 3000 sample paths.}
+    \label{tab:quad-10}
+\end{table}

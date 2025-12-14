@@ -1,0 +1,77 @@
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|c|c|c|c|c|c|c|c|c|}
+        \hline
+        \multicolumn{2}{c|}{Utility} & \multicolumn{2}{c|}{Clearing Loss} & \multicolumn{2}{c|}{Stock Loss} & \multicolumn{2}{c|}{Mu0} & Type \\
+        Mean & S.E & Mean & S.E & Mean & S.E &   &   &   \\
+        \hline
+        $-5.62 \times 10^{-4}$ & $1.30 \times 10^{-5}$ & $2.19 \times 10^{-6}$ & $2.21 \times 10^{-5}$ & $3.38 \times 10^{-7}$ & $6.54 \times 10^{-9}$ & $7.75 \times 10^{-1}$ & $1.08 \times 10^{0}$ & GAN (Mu Unknown) \\
+        \hline
+        $-2.24 \times 10^{-3}$ & $8.08 \times 10^{-8}$ & $6.78 \times 10^{-2}$ & $4.63 \times 10^{-5}$ & $3.14 \times 10^{-9}$ & $3.30 \times 10^{-3}$ & $9.05 \times 10^{-1}$ & $1.19 \times 10^{0}$ & Combo (Mu Unknown) \\
+        \hline
+        NaN & NaN & NaN & NaN & NaN & NaN & $-6.21 \times 10^{-2}$ & $3.01 \times 10^{-2}$ & FBSDE (Mu Unknown) \\
+        \hline
+        $-3.74 \times 10^{-4}$ & $2.71 \times 10^{-5}$ & $1.07 \times 10^{-2}$ & $2.21 \times 10^{-5}$ & $6.72 \times 10^{-7}$ & $3.24 \times 10^{-7}$ & $7.86 \times 10^{-1}$ & $1.09 \times 10^{0}$ & GAN (Mu Known) \\
+        \hline
+        $2.61 \times 10^{0}$ & $6.59 \times 10^{0}$ & $1.17 \times 10^{2}$ & $2.06 \times 10^{-3}$ & $1.35 \times 10^{-1}$ & $8.27 \times 10^{-2}$ & $1.24 \times 10^{-5}$ & $4.31 \times 10^{-3}$ & Combo (Mu Known) \\
+        \hline
+        NaN & NaN & NaN & NaN & NaN & NaN & $1.28 \times 10^{-4}$ & $1.39 \times 10^{-2}$ & FBSDE (Mu Known) \\
+        \hline
+        $-8.94 \times 10^{-4}$ & $7.47 \times 10^{-3}$ & $1.89 \times 10^{-11}$ & $1.70 \times 10^{-5}$ & $1.03 \times 10^{-4}$ & $5.66 \times 10^{-13}$ & $7.66 \times 10^{-1}$ & $1.07 \times 10^{0}$ & Leading Order \\
+        \hline
+    \end{tabular}
+    \caption{Power 1.5 Cost 2 Agents}
+    \label{tab:power-2}
+\end{table}
+
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|c|c|}
+        \hline
+        S0 & Type \\
+        \hline
+        $4.58 \times 10^{-1}$ & GAN (Mu Unknown) \\
+        \hline
+        $5.44 \times 10^{-1}$ & Combo (Mu Unknown) \\
+        \hline
+        $0.00 \times 10^{0}$ & FBSDE (Mu Unknown) \\
+        \hline
+        $4.46 \times 10^{-1}$ & GAN (Mu Known) \\
+        \hline
+        $-4.53 \times 10^{1}$ & Combo (Mu Known) \\
+        \hline
+        $0.00 \times 10^{0}$ & FBSDE (Mu Known) \\
+        \hline
+        $4.15 \times 10^{-1}$ & Leading Order \\
+        \hline
+    \end{tabular}
+    \caption{Power 1.5 Cost 2 Agents $S_0$}
+    \label{tab:power-s0-2}
+\end{table}
+
+\begin{table}[ht]
+    \centering
+     \resizebox{\textwidth}{!}{%
+    \begin{tabular}{|c|c|c|c|c|c|c|}
+        \hline
+        & $\sum_{n\in\mfN} J_n(\dot\varphi_n)$ & $\|\sum_{n\in\mfN}\dot\varphi_n\|^2$ & $\|S_T^\theta - \mfS \|^2$ & $S_0$ & $\mu_0$ & $\sigma_0$ \\
+        \hline
+        Leading Order & $-8.94 \times 10^{-4}$ & $1.89 \times 10^{-11}$ & $7.47 \times 10^{-3}$ & $4.15 \times 10^{-1}$ & $7.66 \times 10^{-1}$ & $1.07 \times 10^{0}$ \\
+        \hline
+        GAN (Mu Known) & $-3.74 \times 10^{-4}$ & $1.07 \times 10^{-2}$ & $2.71 \times 10^{-5}$ & $4.46 \times 10^{-1}$ & $7.86 \times 10^{-1}$ & $1.09 \times 10^{0}$ \\
+        \hline
+        GAN (Mu Unknown) & $-5.62 \times 10^{-4}$ & $2.19 \times 10^{-6}$ & $1.30 \times 10^{-5}$ & $4.58 \times 10^{-1}$ & $7.75 \times 10^{-1}$ & $1.08 \times 10^{0}$ \\
+        \hline
+        Combo (Mu Known) & $2.61 \times 10^{0}$ & $1.17 \times 10^{2}$ & $6.59 \times 10^{0}$ & $-4.53 \times 10^{1}$ & $1.24 \times 10^{-5}$ & $4.31 \times 10^{-3}$ \\
+        \hline
+        Combo (Mu Unknown) & $-2.24 \times 10^{-3}$ & $6.78 \times 10^{-2}$ & $8.08 \times 10^{-8}$ & $5.44 \times 10^{-1}$ & $9.05 \times 10^{-1}$ & $1.19 \times 10^{0}$ \\
+        \hline
+        FBSDE (Mu Known) & NaN & NaN & NaN & $0.00 \times 10^{0}$ & $1.28 \times 10^{-4}$ & $1.39 \times 10^{-2}$ \\
+        \hline
+        FBSDE (Mu Unknown) & NaN & NaN & NaN & $0.00 \times 10^{0}$ & $-6.21 \times 10^{-2}$ & $3.01 \times 10^{-2}$ \\
+        \hline
+    \end{tabular}
+    }
+    \caption{Comparison of Reinforced-GANs Against Ground Truth: 2 Agents with 3/2-Power Costs, simulation is done with 3000 sample paths.}
+    \label{tab:power-2}
+\end{table}
