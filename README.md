@@ -85,6 +85,7 @@ Set `use_combo: True` and `use_fbsde: True`. The following hyperparameters will 
 | Combo (Mu Unknown) | $-2.07\times10^{-1}$ | $1.91\times10^{-2}$ | $6.05\times10^{-6}$ | $3.44\times10^{-1}$ | $5.54\times10^{0}$ | $1.29\times10^{0}$ |
 | FBSDE (Mu Known) | $-3.83\times10^{-1}$ | $2.41\times10^{-4}$ | $2.19\times10^{-1}$ | $0.00\times10^{0}$ | $2.26\times10^{-1}$ | $1.28\times10^{0}$ |
 | FBSDE (Mu Unknown) | $-3.84\times10^{-1}$ | $2.56\times10^{-3}$ | $1.39\times10^{-1}$ | $0.00\times10^{0}$ | $1.61\times10^{0}$ | $1.27\times10^{0}$ |
+
 **Table:** Comparison of Reinforced-GANs against ground truth for 10 agents with quadratic costs.   Simulation is performed using 3000 sample paths.
 
 ### Superlinear Trading Cost, 2 Agents
@@ -97,6 +98,7 @@ Set `use_combo: True` and `use_fbsde: True`. The following hyperparameters will 
 | Combo (Mu Unknown) | $-2.24\times10^{-3}$ | $6.78\times10^{-2}$ | $8.08\times10^{-8}$ | $5.44\times10^{-1}$ | $9.05\times10^{-1}$ | $1.19\times10^{0}$ |
 | FBSDE (Mu Known) | NaN | NaN | NaN | NaN | NaN | NaN |
 | FBSDE (Mu Unknown) | NaN | NaN | NaN | NaN | NaN | NaN |
+
 **Table:** Comparison of Reinforced-GANs against ground truth for 2 agents with $3/2$-power costs.   Simulation is performed using 3000 sample paths.
 
 ### Superlinear Trading Cost, 10 Agents
@@ -106,4 +108,5 @@ Set `use_combo: True` and `use_fbsde: True`. The following hyperparameters will 
 | GAN (Mu Unknown) | $-9.46\times10^{-2}$ | $9.32\times10^{-5}$ | $5.04\times10^{-6}$ | $3.65\times10^{-1}$ | $1.64\times10^{-1}$ | $1.10\times10^{0}$ |
 | Combo (Mu Unknown) | $-3.76\times10^{-1}$ | $8.63\times10^{1}$ | $3.25\times10^{-7}$ | $3.61\times10^{-1}$ | $2.42\times10^{-1}$ | $1.32\times10^{0}$ |
 | FBSDE (Mu Unknown) | NaN | NaN | NaN | NaN | NaN | NaN |
+
 **Table:** Comparison of Reinforced-GANs against ground truth for 10 agents with $3/2$-power costs.  Simulation is performed using 3000 sample paths.
