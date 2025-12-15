@@ -25,7 +25,13 @@ pip3 install torch numpy matplotlib tqdm pytz
 ## Usage
 The specification of equilibrium solver to train as well as hyperparameters are all achieved at the `training_args` variable. Here are a few important flags that can be applied to the settings all equilibrium solvers:
 - `use_true_mu`: If set to `True`, then the drift is computed by using an analytical expression in terms of the volatility and hedging strategies. Note that this is only supported for quadratic loss or when the number of agents is 2. If set to `False`, then the drift is parameterized by the neural network.
-- `clearing_known`: If set to `True`, then the neural network only parameterized the hedging strategies $$\dot{\varphi}_1, \dots, \dot{\varphi}_{N-1}$$ of first `N-1` agents, whereas the last agent's strategy is assumed to clear the market, i.e., $$\dot{\varphi}_N = -\sum_{n = 1}^{N-1} \dot{\varphi}_n$$. If set to `False`, then the neural network will parameterize the hedging strategies of all N agents.
+- `clearing_known`: If set to `True`, then the neural network only parameterizes the hedging strategies $`\dot{\varphi}_1, \dots, \dot{\varphi}_{N-1}`$ of the first `N-1` agents, whereas the last agent's strategy is assumed to clear the market:
+
+$$
+\dot{\varphi}_N = -\sum_{n=1}^{N-1} \dot{\varphi}_n
+$$
+
+If set to `False`, then the neural network will parameterize the hedging strategies of all $N$ agents.
 
 ### Training Reinforced-GAN
 
