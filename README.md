@@ -1,4 +1,10 @@
-# Neural Network Training Pipeline for Reinforced-GAN, Combo Solver, and FBSDE Solver
+# Deep Learning Algorithms for Equilibrium Models 
+
+Training Pipeline for 
+
+- Reinforced-GAN
+- Combo Solver
+- Deep FBSDE Solver
 
 This repository provides a flexible training pipeline to train generator, discriminator, and combined models for multi-agent dynamic hedging problems. The code is built in PyTorch and supports multiple training configurations, including deep hedging, FBSDE, and leading-order approximations.
 
